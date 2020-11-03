@@ -1,0 +1,10 @@
+[package]
+name = "kfs"
+version = "0.1.0"
+authors = ["tdelabro <tdelabro@student.42.fr>"]
+edition = "2018"
+
+[lib]
+crate-type = ["staticlib"]
+
+[dependencies]
