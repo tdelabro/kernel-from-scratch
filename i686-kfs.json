@@ -1,0 +1,19 @@
+{
+	"llvm-target": "i686-unknown-none",
+	"data-layout": "e-m:e-p:32:32-p270:32:32-p271:32:32-p272:64:64-f64:32:64-f80:32-n8:16:32-S128",
+	"linker-flavor": "gcc",
+	"target-endian": "little",
+	"target-c-int-width": "32",
+	"target-pointer-width": "32",
+	"arch": "x86",
+	"os": "none",
+	"features": "-mmx,-fxsr,-sse,-sse2,+soft-float",
+	"pre-link-args": {
+    "gcc": [
+      "-Wl,--as-needed",
+      "-Wl,-z,noexecstack",
+      "-m32"
+		]
+	},
+	"panic-strategy": "abort"
+}

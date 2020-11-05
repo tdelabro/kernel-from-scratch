@@ -2,9 +2,15 @@
 name = "kfs"
 version = "0.1.0"
 authors = ["tdelabro <tdelabro@student.42.fr>"]
-edition = "2018"
 
 [lib]
 crate-type = ["staticlib"]
 
+[profile.dev]
+panic = "abort"
+
+[profile.release]
+panic = "abort"
+
 [dependencies]
+spin = "0.7.0"
