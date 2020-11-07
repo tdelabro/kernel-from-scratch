@@ -12,3 +12,26 @@ header_start:
     dw 0    ; flags
     dd 8    ; size
 header_end:
+
+section .bss
+align 16
+stack_bottom:
+	resb 16384 ; 16 KiB
+stack_top:
+
+section .text
+global start
+bits 32
+start:
+    mov esp, stack_top
+
+	; GDT
+	; PAGING
+
+	extern kernel_main
+	jmp kernel_main
+	
+	cli
+.hang:	hlt
+	jmp .hang
+.end:

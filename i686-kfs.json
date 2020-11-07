@@ -15,5 +15,9 @@
       "-m32"
 		]
 	},
+	"disable-redzone": true,
+    "eliminate-frame-pointer": true,
+    "linker-is-gnu": true,
+    "no-compiler-rt": true,
 	"panic-strategy": "abort"
 }
