@@ -133,7 +133,6 @@ pub static SET_2: [char; 132] = [
     0x0 as char,
 ];
 
-
 pub static SET_2_SHIFT: [char; 132] = [
     0x0 as char,
     0x0 as char,

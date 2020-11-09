@@ -12,7 +12,7 @@ impl Pic {
     }
 
     unsafe fn end_of_interrupt(&mut self) {
-        self.command.write(0x20);   // EOI End Of Interupt
+        self.command.write(0x20); // EOI End Of Interupt
     }
 }
 
@@ -34,7 +34,7 @@ impl ChainedPics {
                     command: io_port::UnsafePort::new(0xA0),
                     data: io_port::UnsafePort::new(0xA1),
                 },
-            ]
+            ],
         }
     }
 
@@ -43,9 +43,9 @@ impl ChainedPics {
         let saved_mask2 = self.pics[1].data.read();
 
         // Init signal
-        self.pics[0].command.write(0x11);   // ICW1_INIT | ICW1_ICW4
+        self.pics[0].command.write(0x11); // ICW1_INIT | ICW1_ICW4
         io_port::wait();
-        self.pics[1].command.write(0x11);   // ICW1_INIT | ICW1_ICW4
+        self.pics[1].command.write(0x11); // ICW1_INIT | ICW1_ICW4
         io_port::wait();
 
         // Vector offset
@@ -61,9 +61,9 @@ impl ChainedPics {
         io_port::wait();
 
         // 8086/88 (MCS-80/85) mode
-        self.pics[0].data.write(1);         // ICW4_8086
+        self.pics[0].data.write(1); // ICW4_8086
         io_port::wait();
-        self.pics[1].data.write(1);         // ICW4_8086
+        self.pics[1].data.write(1); // ICW4_8086
         io_port::wait();
 
         self.pics[0].data.write(saved_mask1);
@@ -71,8 +71,7 @@ impl ChainedPics {
     }
 
     pub fn handles_interrupt(&self, interrupt_id: u8) -> bool {
-        self.pics[0].handles_interrupt(interrupt_id)
-            || self.pics[1].handles_interrupt(interrupt_id)
+        self.pics[0].handles_interrupt(interrupt_id) || self.pics[1].handles_interrupt(interrupt_id)
     }
 
     pub unsafe fn notify_end_of_interrupt(&mut self, interrupt_id: u8) {
@@ -87,7 +86,4 @@ impl ChainedPics {
 
 use crate::spin::Mutex;
 
-pub static PICS: Mutex<ChainedPics> = Mutex::new(
-    unsafe { ChainedPics::new(0x20, 0x28) }
-);
-
+pub static PICS: Mutex<ChainedPics> = Mutex::new(unsafe { ChainedPics::new(0x20, 0x28) });

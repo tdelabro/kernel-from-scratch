@@ -27,7 +27,7 @@ ISO = os.iso
 # Rust
 LIB = target/$(TARGET)/release/lib$(OS).a
 
-default: $(ISO)
+default: $(ISO) doc
 
 $(BUILD_DIR):
 	mkdir -p build
@@ -43,7 +43,7 @@ lib:
 
 $(KERNEL): $(OBJ_DIR) $(OBJ) lib
 	opt/bin/i686-elf-gcc -T $(LINKER) -o $@ -ffreestanding -fno-builtin -fno-stack-protector -fno-rtti -nostdlib -nodefaultlibs -O2 $(OBJ) $(LIB) -lgcc
-#	 gcc -m32 -T $(LINKER) $(OBJ) $(LIB) -o $@ -fno-builtin -fno-stack-protector -fno-rtti -nostdlib -nodefaultlibs -ffreestanding 
+#	 gcc -m32 -T $(LINKER) $(OBJ) $(LIB) -o $@ -fno-pic -fno-pie -fno-builtin -fno-stack-protector -fno-rtti -nostdlib -nodefaultlibs -ffreestanding 
 
 $(ISO): $(BUILD_DIR) $(KERNEL)
 	mkdir -p $(GRUB_DIR)
@@ -54,6 +54,9 @@ $(ISO): $(BUILD_DIR) $(KERNEL)
 kernel: $(KERNEL)
 
 iso: $(ISO)
+
+doc:
+	cargo doc --target $(TARGET).json
 
 run: build
 	qemu-system-i386 -cdrom $(ISO)
@@ -67,4 +70,4 @@ fclean: clean
 
 re: fclean default
 
-.PHONY: default kernel iso run clean fclean re
+.PHONY: default kernel iso doc run clean fclean re
