@@ -20,9 +20,9 @@ stack_bottom:
 stack_top:
 
 section .text
-global start
+global _start
 bits 32
-start:
+_start:
     mov esp, stack_top
 
 	; GDT

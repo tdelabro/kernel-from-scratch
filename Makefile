@@ -44,6 +44,7 @@ lib:
 $(KERNEL): $(OBJ_DIR) $(OBJ) lib
 	opt/bin/i686-elf-gcc -T $(LINKER) -o $@ -ffreestanding -fno-builtin -fno-stack-protector -fno-rtti -nostdlib -nodefaultlibs -O2 $(OBJ) $(LIB) -lgcc
 #	 gcc -m32 -T $(LINKER) $(OBJ) $(LIB) -o $@ -fno-pic -fno-pie -fno-builtin -fno-stack-protector -fno-rtti -nostdlib -nodefaultlibs -ffreestanding 
+#	clang -target i386-unknown-none -T $(LINKER) $(OBJ) $(LIB) -o $@ -fno-pic -fno-pie -fno-builtin -fno-stack-protector -fno-rtti -nostdlib -nodefaultlibs -ffreestanding 
 
 $(ISO): $(BUILD_DIR) $(KERNEL)
 	mkdir -p $(GRUB_DIR)
