@@ -1,12 +1,13 @@
 ARCH = i686
 OS = kfs
 TARGET = $(ARCH)-$(OS)
+OPT_DIR = opt/
 
 # Sources
 SRC_DIR = src/
 
 ASM_DIR = $(addprefix $(SRC_DIR), asm/)
-ASM = multiboot_header.asm boot.asm
+ASM = multiboot_header.asm
 SRC = $(addprefix $(ASM_DIR), ASM)
 
 OTHERS_DIR = $(addprefix $(SRC_DIR), others/)
@@ -29,6 +30,15 @@ LIB = target/$(TARGET)/release/lib$(OS).a
 
 default: $(ISO) doc
 
+setup: $(OPT_DIR)
+	rustup toolchain install nightly
+	rustup component add rust-src
+	sudo apt install xorriso
+	sudo apt install qemu
+
+$(OPT_DIR):
+	tar -Jxvf cross-compiler.tar.xz
+
 $(BUILD_DIR):
 	mkdir -p build
 
@@ -41,10 +51,8 @@ $(OBJ_DIR)%.o: $(ASM_DIR)%.asm
 lib:
 	cargo build --release --target $(TARGET).json
 
-$(KERNEL): $(OBJ_DIR) $(OBJ) lib
+$(KERNEL): $(OPT_DIR) $(OBJ_DIR) $(OBJ) lib
 	opt/bin/i686-elf-gcc -T $(LINKER) -o $@ -ffreestanding -fno-builtin -fno-stack-protector -fno-rtti -nostdlib -nodefaultlibs -O2 $(OBJ) $(LIB) -lgcc
-#	 gcc -m32 -T $(LINKER) $(OBJ) $(LIB) -o $@ -fno-pic -fno-pie -fno-builtin -fno-stack-protector -fno-rtti -nostdlib -nodefaultlibs -ffreestanding 
-#	clang -target i386-unknown-none -T $(LINKER) $(OBJ) $(LIB) -o $@ -fno-pic -fno-pie -fno-builtin -fno-stack-protector -fno-rtti -nostdlib -nodefaultlibs -ffreestanding 
 
 $(ISO): $(BUILD_DIR) $(KERNEL)
 	mkdir -p $(GRUB_DIR)
@@ -67,8 +75,9 @@ clean:
 	cargo clean
 
 fclean: clean
+	rm -rf opt
 	rm $(ISO)
 
 re: fclean default
 
-.PHONY: default kernel iso doc run clean fclean re
+.PHONY: setup default kernel iso doc run clean fclean re
