@@ -24,12 +24,10 @@ global _start
 bits 32
 _start:
     mov esp, stack_top
-
-	; GDT
-	; PAGING
+	xor ebp, ebp
 
 	extern kernel_main
-	jmp kernel_main
+	call kernel_main
 	
 	cli
 .hang:	hlt
