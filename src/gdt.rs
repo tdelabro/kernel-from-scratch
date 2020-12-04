@@ -53,17 +53,19 @@ const GDTR: GdtR = GdtR {
     base: GDTBASE,
 };
 
-pub unsafe fn init() {
-    memcpy(GDTBASE as *mut u8, GDT.as_ptr() as *const u8, 8 * GDTLEN);
-    asm!("lgdtl ({})", in(reg) &GDTR, options(att_syntax));
-    asm!(
-        "movw $0x10, %ax",
-        "movw %ax, %ds",
-        "movw %ax, %es",
-        "movw %ax, %fs",
-        "movw %ax, %gs",
-        "ljmp $0x08, $next",
-        "next:",
-        options(att_syntax),
-    );
+pub fn init() {
+    unsafe { 
+        memcpy(GDTBASE as *mut u8, GDT.as_ptr() as *const u8, 8 * GDTLEN);
+        asm!("lgdtl ({})", in(reg) &GDTR, options(att_syntax));
+        asm!(
+            "movw $0x10, %ax",
+            "movw %ax, %ds",
+            "movw %ax, %es",
+            "movw %ax, %fs",
+            "movw %ax, %gs",
+            "ljmp $0x08, $next",
+            "next:",
+            options(att_syntax),
+        );
+    }
 }

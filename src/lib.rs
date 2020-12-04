@@ -39,7 +39,7 @@ fn panic(_info: &PanicInfo) -> ! {
 }
 
 fn init() {
-    unsafe { gdt::init() };
+    gdt::init();
     WRITER.lock().clear_screen();
     PS2.lock().init();
 }
