@@ -23,10 +23,10 @@ extern crate spin;
 
 #[macro_use]
 pub mod writer;
+pub mod gdt;
 pub mod io_port;
 pub mod keyboard;
 pub mod ps2;
-pub mod gdt;
 
 use keyboard::{Command, KEYBOARD};
 use ps2::PS2;
@@ -39,9 +39,9 @@ fn panic(_info: &PanicInfo) -> ! {
 }
 
 fn init() {
-    gdt::init();
+    unsafe { gdt::init() };
     WRITER.lock().clear_screen();
-    ps2::PS2.lock().initialize();
+    PS2.lock().init();
 }
 
 /// The kernel entry point.

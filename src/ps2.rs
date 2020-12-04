@@ -69,7 +69,7 @@ impl Ps2 {
     /// Initialise the PS/2 controler with proper config
     ///
     /// Must be executed before use.
-    pub fn initialize(&self) {
+    pub fn init(&self) {
         self.command(0xAD);
         self.command(0xA7);
         self.buffer.read();
