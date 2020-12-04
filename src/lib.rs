@@ -13,6 +13,7 @@
 #![feature(const_fn)]
 #![feature(ptr_internals)]
 #![feature(llvm_asm)]
+#![feature(asm)]
 #![feature(associated_type_bounds)]
 #![no_std]
 
@@ -25,6 +26,7 @@ pub mod writer;
 pub mod io_port;
 pub mod keyboard;
 pub mod ps2;
+pub mod gdt;
 
 use keyboard::{Command, KEYBOARD};
 use ps2::PS2;
@@ -36,6 +38,12 @@ fn panic(_info: &PanicInfo) -> ! {
     loop {}
 }
 
+fn init() {
+    gdt::init();
+    WRITER.lock().clear_screen();
+    ps2::PS2.lock().initialize();
+}
+
 /// The kernel entry point.
 ///
 /// This is the function called by grub after reading the multiboot header.
@@ -43,9 +51,7 @@ fn panic(_info: &PanicInfo) -> ! {
 /// screen.
 #[no_mangle]
 pub extern "C" fn kernel_main() {
-    WRITER.lock().clear_screen();
-    println!("{}", 42);
-    ps2::PS2.lock().initialize();
+    init();
     loop {
         let c = PS2.lock().read();
         match KEYBOARD.lock().handle_scan_code(c as usize) {

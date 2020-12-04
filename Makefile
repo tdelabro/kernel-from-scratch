@@ -68,7 +68,7 @@ doc:
 	cargo doc --target $(TARGET).json
 
 run: build
-	qemu-system-i386 -cdrom $(ISO)
+	qemu-system-i386 -cdrom $(ISO) -curses
 
 clean:
 	rm -rf $(BUILD_DIR)

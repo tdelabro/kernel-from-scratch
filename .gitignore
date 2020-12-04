@@ -15,3 +15,10 @@ Cargo.lock
 
 /target
 Cargo.lock
+
+# Cross compiler archive
+cross-compiler.tar.xz
+
+#build
+/build
+os.iso
