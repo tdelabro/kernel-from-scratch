@@ -27,6 +27,7 @@ pub mod gdt;
 pub mod io_port;
 pub mod keyboard;
 pub mod ps2;
+pub mod stack;
 
 use keyboard::{Command, KEYBOARD};
 use ps2::PS2;
@@ -42,6 +43,7 @@ fn init() {
     gdt::init();
     WRITER.lock().clear_screen();
     PS2.lock().init();
+        stack::print_stack();
 }
 
 /// The kernel entry point.
@@ -52,6 +54,7 @@ fn init() {
 #[no_mangle]
 pub extern "C" fn kernel_main() {
     init();
+    stack::print_stack();
     loop {
         let c = PS2.lock().read();
         match KEYBOARD.lock().handle_scan_code(c as usize) {
