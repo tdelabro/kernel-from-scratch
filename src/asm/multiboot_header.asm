@@ -14,16 +14,17 @@ header_start:
 header_end:
 
 section .bss
+global stack_high
 align 16
-stack_bottom:
+stack_low:
 	resb 16384 ; 16 KiB
-stack_top:
+stack_high:
 
 section .text
 global _start
 bits 32
 _start:
-    mov esp, stack_top
+    mov esp, stack_high
 	xor ebp, ebp
 
 	extern kernel_main

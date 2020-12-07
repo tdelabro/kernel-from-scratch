@@ -52,7 +52,6 @@ use core::marker::PhantomData;
 /// let value = port128.read();
 /// port128.write(0xFF);
 /// ```
-#[derive(Debug, Clone, Copy)]
 pub struct Port<T: InOut> {
     port: u16,
     phantom: PhantomData<T>,
@@ -95,7 +94,7 @@ impl<T: InOut> Port<T> {
 ///     port128.write(0xFF);
 /// }
 /// ```
-#[derive(Debug, Clone, Copy)]
+#[derive(Clone, Copy)]
 pub struct UnsafePort<T: InOut> {
     port: u16,
     phantom: PhantomData<T>,

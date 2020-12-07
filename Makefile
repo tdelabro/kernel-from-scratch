@@ -28,13 +28,14 @@ ISO = os.iso
 # Rust
 LIB = target/$(TARGET)/release/lib$(OS).a
 
-default: $(ISO) doc
+default: $(ISO)
 
 setup: $(OPT_DIR)
 	rustup toolchain install nightly
 	rustup component add rust-src
 	sudo apt install xorriso
 	sudo apt install qemu
+	cargo install rustfilt
 
 $(OPT_DIR):
 	tar -Jxvf cross-compiler.tar.xz

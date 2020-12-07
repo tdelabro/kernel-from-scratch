@@ -36,6 +36,8 @@ use writer::WRITER;
 /// This function is called on panic.
 #[panic_handler]
 fn panic(_info: &PanicInfo) -> ! {
+    println!("\nCRASHED");
+    stack::trace(10);
     loop {}
 }
 
@@ -43,7 +45,6 @@ fn init() {
     gdt::init();
     WRITER.lock().clear_screen();
     PS2.lock().init();
-        stack::print_stack();
 }
 
 /// The kernel entry point.
@@ -54,7 +55,6 @@ fn init() {
 #[no_mangle]
 pub extern "C" fn kernel_main() {
     init();
-    stack::print_stack();
     loop {
         let c = PS2.lock().read();
         match KEYBOARD.lock().handle_scan_code(c as usize) {

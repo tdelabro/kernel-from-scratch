@@ -1,6 +1,6 @@
 #[repr(u8)]
 #[allow(dead_code)]
-#[derive(Debug, Clone, Copy)]
+#[derive(Clone, Copy)]
 pub enum Color {
     Black = 0,
     Blue = 1,
@@ -20,7 +20,7 @@ pub enum Color {
     White = 15,
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Clone, Copy)]
 pub struct ColorCode(pub u8);
 
 impl ColorCode {
@@ -30,7 +30,7 @@ impl ColorCode {
 }
 
 #[repr(C)]
-#[derive(Debug, Clone, Copy)]
+#[derive(Clone, Copy)]
 pub struct ScreenChar {
     pub ascii_character: u8,
     pub color_code: ColorCode,
@@ -49,7 +49,7 @@ impl ScreenChar {
 pub const BUFFER_HEIGHT: usize = 25;
 pub const BUFFER_WIDTH: usize = 80;
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Clone, Copy)]
 pub struct Buffer {
     pub chars: [[ScreenChar; BUFFER_WIDTH]; BUFFER_HEIGHT],
 }
@@ -58,7 +58,7 @@ pub struct Buffer {
 ///
 /// Characters are written on the last line of the screen, according to a
 /// specific color code.
-#[derive(Debug, Clone, Copy)]
+#[derive(Clone, Copy)]
 pub struct Screen {
     pub column_position: usize,
     pub color_code: ColorCode,
