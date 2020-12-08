@@ -27,7 +27,8 @@ pub mod gdt;
 pub mod io_port;
 pub mod keyboard;
 pub mod ps2;
-pub mod stack;
+pub mod debug;
+pub mod shell;
 
 use keyboard::{Command, KEYBOARD};
 use ps2::PS2;
@@ -36,8 +37,8 @@ use writer::WRITER;
 /// This function is called on panic.
 #[panic_handler]
 fn panic(_info: &PanicInfo) -> ! {
-    println!("\nCRASHED");
-    stack::trace(10);
+    println!("\nPANIC");
+    debug::stack_trace(10);
     loop {}
 }
 
@@ -55,6 +56,7 @@ fn init() {
 #[no_mangle]
 pub extern "C" fn kernel_main() {
     init();
+    debug::dump_segment_registers();
     loop {
         let c = PS2.lock().read();
         match KEYBOARD.lock().handle_scan_code(c as usize) {
@@ -63,6 +65,7 @@ pub extern "C" fn kernel_main() {
             keyboard::Key::Command(Command::Right) => WRITER.lock().right(),
             keyboard::Key::Command(Command::Prev) => WRITER.lock().prev_screen(),
             keyboard::Key::Command(Command::Next) => WRITER.lock().next_screen(),
+            keyboard::Key::Command(Command::Enter) => shell::execute(),
             _ => (),
         }
     }

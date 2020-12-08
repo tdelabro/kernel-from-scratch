@@ -1,7 +1,7 @@
 /// Segment Descriptor
 #[derive(Debug, Clone, Copy)]
 #[repr(C, packed)]
-struct GdtDesc {
+pub struct GdtDesc {
     lim0_15: u16,
     base0_15: u16,
     base16_23: u8,
@@ -65,9 +65,9 @@ impl fmt::Display for GdtDesc {
 /// GDT Register
 #[derive(Debug, Clone, Copy)]
 #[repr(C, packed)]
-struct GdtR {
-    limit: u16,
-    base: u32,
+pub struct GdtR {
+    pub limit: u16,
+    pub base: u32,
 }
 
 extern "C" {
@@ -105,11 +105,11 @@ struct Tss {
 }
 
 impl Tss {
-    fn new(ss: u16, esp: u32, iopb: u16) -> Tss {
+    fn new(esp: u32) -> Tss {
         Tss {
             link: 0, link_h: 0,
             esp0: esp,
-            ss0: ss, ss0_h: 0,
+            ss0: 0x18, ss0_h: 0,
             esp1: 0,
             ss1: 0, ss1_h: 0,
             esp2: 0,
@@ -125,14 +125,14 @@ impl Tss {
             ebp: 0,
             esi: 0,
             edi: 0,
-            es: 0x13, es_h: 0,
-            cs: 0x0b, cs_h: 0,
+            es: 0x13, es_h: 0, // 0x10 | 0x3
+            cs: 0x0b, cs_h: 0, // 0x8 | 0x3
             ss: 0x13, ss_h: 0,
             ds: 0x13, ds_h: 0,
             fs: 0x13, fs_h: 0,
             gs: 0x13, gs_h: 0,
             ldtr: 0, ldtr_h: 0,
-            trap: 0, oipb_offset: iopb,
+            trap: 0, oipb_offset: 0x68, // 0x68 = 104 = size_of(Tss)
         }
     }
 }
@@ -149,8 +149,8 @@ const GDTR: GdtR = GdtR {
 pub fn init() {
     let stack_high: u32;
     unsafe { asm!("mov {}, stack_high", out(reg) stack_high); }
+    let tss = Tss::new(stack_high); 
 
-    let tss = Tss::new(0x18, stack_high, 0x68); // 0x68 = 104 = size_of(Tss)
     let gdt: [GdtDesc; GDTLEN] = [
         GdtDesc::new(0x0, 0x0, 0x0, 0x0),
         GdtDesc::new(0x0, 0xFFFFF, 0x9A, 0x0D), // 0x8  Code 
@@ -166,8 +166,8 @@ pub fn init() {
 
     unsafe { 
         memcpy(GDTBASE as *mut u8, gdt.as_ptr() as *const u8, 8 * GDTLEN);
-        asm!("lgdtl ({})", in(reg) &GDTR, options(att_syntax));
         asm!("
+            lgdtl ({})
             ljmp $0x08, $2f
             2:
             movw $0x18, %ax
@@ -179,7 +179,7 @@ pub fn init() {
             movw %ax, %gs
             movw $0x38, %ax
             ltr %ax
-            ", options(att_syntax),
+            ", in(reg) &GDTR, options(att_syntax),
         );
     }
 }

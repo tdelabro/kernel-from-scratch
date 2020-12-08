@@ -93,6 +93,8 @@ pub enum Command {
     Prev = 2,
     /// Display next screen
     Next = 3,
+    /// Execute the current line
+    Enter = 4,
 }
 
 /// Scan code interpretation
@@ -168,7 +170,10 @@ impl Keyboard {
                     self.state.set_release(false);
                     Key::None
                 } else {
-                    Key::Character(self.get_char(scan_code))
+                    match sc {
+                        0x5A => Key::Command(Command::Enter),
+                        _ => Key::Character(self.get_char(sc)),
+                    }
                 }
             }
             _ => Key::None,

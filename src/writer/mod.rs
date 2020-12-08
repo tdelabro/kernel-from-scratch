@@ -12,6 +12,7 @@ mod screen_writer;
 
 use spin::Mutex;
 
+pub use self::screen_writer::BUFFER_WIDTH;
 use self::screen_writer::ScreenWriter;
 
 /// The unique entry point to write characters on the VGA screen

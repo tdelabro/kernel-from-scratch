@@ -113,7 +113,7 @@ impl Ps2 {
         }
         self.set_config(conf);
 
-        println!("PS/2 successfully initialized.");
+        println!("PS/2 successfully initialized.\n");
     }
 }
 

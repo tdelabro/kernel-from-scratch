@@ -37,11 +37,11 @@ pub struct ScreenChar {
 }
 
 impl ScreenChar {
-    pub fn blink(&mut self) {
+    fn blink(&mut self) {
         self.color_code.0 = (self.color_code.0 & !(0xF << 4)) | (0x8 << 4);
     }
 
-    pub fn unblink(&mut self) {
+    fn unblink(&mut self) {
         self.color_code.0 &= !(0xF << 4);
     }
 }
@@ -137,12 +137,12 @@ impl ScreenWriter {
                 let row = BUFFER_HEIGHT - 1;
                 let col = self.column_position;
                 let color_code = self.color_code;
-                if self.buffer().chars[row][col].ascii_character != 0x0 {
+                if self.mut_buffer().chars[row][col].ascii_character != 0x0 {
                     self.shift_right();
                 }
                 unsafe {
                     write_volatile(
-                        &mut self.buffer().chars[row][col],
+                        &mut self.mut_buffer().chars[row][col],
                         ScreenChar {
                             ascii_character: byte,
                             color_code: color_code,
@@ -175,7 +175,7 @@ impl ScreenWriter {
     pub fn right(&mut self) {
         if self.column_position < BUFFER_WIDTH - 1 {
             let col = self.column_position;
-            let c = self.buffer().chars[BUFFER_HEIGHT - 1][col].ascii_character;
+            let c = self.mut_buffer().chars[BUFFER_HEIGHT - 1][col].ascii_character;
             if c != 0x0 {
                 self.change_position(self.column_position + 1);
             }
@@ -185,20 +185,20 @@ impl ScreenWriter {
     fn unblink_current(&mut self) {
         let row = BUFFER_HEIGHT - 1;
         let col = self.column_position;
-        let mut character = self.buffer().chars[row][col];
+        let mut character = self.mut_buffer().chars[row][col];
         character.unblink();
         unsafe {
-            write_volatile(&mut self.buffer().chars[row][col], character);
+            write_volatile(&mut self.mut_buffer().chars[row][col], character);
         }
     }
 
     fn blink_current(&mut self) {
         let row = BUFFER_HEIGHT - 1;
         let col = self.column_position;
-        let mut character = self.buffer().chars[row][col];
+        let mut character = self.mut_buffer().chars[row][col];
         character.blink();
         unsafe {
-            write_volatile(&mut self.buffer().chars[row][col], character);
+            write_volatile(&mut self.mut_buffer().chars[row][col], character);
         }
     }
 
@@ -212,7 +212,7 @@ impl ScreenWriter {
         let row = BUFFER_HEIGHT - 1;
         let col = self.column_position;
         let mut end_line: usize = col;
-        let buffer = self.buffer();
+        let buffer = self.mut_buffer();
 
         while buffer.chars[row][end_line].ascii_character != 0x0 {
             end_line += 1;
@@ -230,7 +230,7 @@ impl ScreenWriter {
         let row = BUFFER_HEIGHT - 1;
         let col = self.column_position;
         let mut i: usize = col;
-        let buffer = self.buffer();
+        let buffer = self.mut_buffer();
 
         while buffer.chars[row][i].ascii_character != 0x0 {
             unsafe {
@@ -248,7 +248,7 @@ impl ScreenWriter {
 
     fn new_line(&mut self) {
         self.unblink_current();
-        let buffer = self.buffer();
+        let buffer = self.mut_buffer();
         for row in 1..BUFFER_HEIGHT {
             for col in 0..BUFFER_WIDTH {
                 unsafe {
@@ -263,7 +263,7 @@ impl ScreenWriter {
 
     fn clear_row(&mut self, row: usize) {
         for col in 0..BUFFER_WIDTH {
-            let buffer = self.buffer();
+            let buffer = self.mut_buffer();
             unsafe {
                 write_volatile(
                     &mut buffer.chars[row][col],
@@ -276,8 +276,12 @@ impl ScreenWriter {
         }
     }
 
-    fn buffer(&mut self) -> &mut Buffer {
+    fn mut_buffer(&mut self) -> &mut Buffer {
         unsafe { self.buffer.as_mut() }
+    }
+
+    fn ref_buffer(&self) -> &Buffer {
+        unsafe { self.buffer.as_ref() }
     }
 
     fn load_screen(&mut self, index: usize) {
@@ -285,9 +289,9 @@ impl ScreenWriter {
             for col in 0..BUFFER_WIDTH {
                 unsafe {
                     self.screens[self.index].buffer.chars[row][col] =
-                        read_volatile(&self.buffer().chars[row][col]);
+                        read_volatile(&self.mut_buffer().chars[row][col]);
                     write_volatile(
-                        &mut self.buffer().chars[row][col],
+                        &mut self.mut_buffer().chars[row][col],
                         self.screens[index].buffer.chars[row][col],
                     );
                 }
@@ -320,6 +324,14 @@ impl ScreenWriter {
             0 => NUMBER_OF_SCREENS - 1,
             _ => self.index - 1,
         });
+    }
+
+    
+    pub fn get_current_line(&self, ascii_line: &mut [u8; BUFFER_WIDTH]) {
+        let buffer = self.ref_buffer();
+        for i in 0..BUFFER_WIDTH {
+            ascii_line[i] = buffer.chars[BUFFER_HEIGHT - 1][i].ascii_character;
+        }
     }
 }
 

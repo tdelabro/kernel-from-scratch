@@ -89,7 +89,7 @@ pub static SET_2: [char; 132] = [
     0x0 as char,
     0x0 as char,
     0x0 as char,
-    0x0D as char,
+    0x0D as char,   // cr Carriag Return
     ']',
     0x0 as char,
     '\\',
@@ -101,7 +101,7 @@ pub static SET_2: [char; 132] = [
     0x0 as char,
     0x0 as char,
     0x0 as char,
-    0x8 as char,
+    0x8 as char,    // bs Backspace
     0x0 as char,
     0x0 as char,
     '1',
