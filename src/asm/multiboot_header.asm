@@ -15,6 +15,7 @@ header_end:
 
 section .bss
 global stack_high
+global stack_low
 align 16
 stack_low:
 	resb 16384 ; 16 KiB

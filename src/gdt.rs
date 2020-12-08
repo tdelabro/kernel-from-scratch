@@ -148,11 +148,12 @@ const GDTR: GdtR = GdtR {
 
 pub fn init() {
     let stack_high: u32;
-    unsafe { asm!("mov {}, stack_high", out(reg) stack_high); }
+    unsafe { asm!("lea {}, [stack_high]", out(reg) stack_high); }
     let tss = Tss::new(stack_high); 
 
     let gdt: [GdtDesc; GDTLEN] = [
-        GdtDesc::new(0x0, 0x0, 0x0, 0x0),
+        GdtDesc::new(0x0, 0x0, 0x0, 0x0),       // 0x0 Not used
+
         GdtDesc::new(0x0, 0xFFFFF, 0x9A, 0x0D), // 0x8  Code 
         GdtDesc::new(0x0, 0xFFFFF, 0x92, 0x0D), // 0x10 Data
         GdtDesc::new(0x0, 0x0, 0x96, 0x0D),     // 0x18 Stack

@@ -29,6 +29,7 @@ pub mod keyboard;
 pub mod ps2;
 pub mod debug;
 pub mod shell;
+pub mod power_management;
 
 use keyboard::{Command, KEYBOARD};
 use ps2::PS2;
@@ -38,7 +39,8 @@ use writer::WRITER;
 #[panic_handler]
 fn panic(_info: &PanicInfo) -> ! {
     println!("\nPANIC");
-    debug::stack_trace(10);
+    println!("Stack Trace:");
+    debug::stack_trace(20);
     loop {}
 }
 
@@ -46,6 +48,7 @@ fn init() {
     gdt::init();
     WRITER.lock().clear_screen();
     PS2.lock().init();
+    WRITER.lock().clear_screen();
 }
 
 /// The kernel entry point.
@@ -56,7 +59,6 @@ fn init() {
 #[no_mangle]
 pub extern "C" fn kernel_main() {
     init();
-    debug::dump_segment_registers();
     loop {
         let c = PS2.lock().read();
         match KEYBOARD.lock().handle_scan_code(c as usize) {
