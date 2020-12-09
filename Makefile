@@ -53,7 +53,7 @@ lib:
 	cargo build --release --target $(TARGET).json
 
 $(KERNEL): $(OPT_DIR) $(OBJ_DIR) $(OBJ) lib
-	opt/bin/i686-elf-gcc -T $(LINKER) -o $@ -ffreestanding -fno-builtin -fno-stack-protector -fno-omit-frame-pointer -fno-rtti -nostdlib -nodefaultlibs -O2 $(OBJ) $(LIB) -lgcc
+	opt/bin/i686-elf-gcc -T $(LINKER) -o $@ -ffreestanding -fno-builtin -fno-stack-protector -fno-omit-frame-pointer -fno-rtti -nostdlib -nodefaultlibs $(OBJ) $(LIB) -lgcc
 
 $(ISO): $(BUILD_DIR) $(KERNEL)
 	mkdir -p $(GRUB_DIR)

@@ -57,18 +57,18 @@ fn init() {
 /// It first initializes hardwares and wait for keyboard inputs to display on
 /// screen.
 #[no_mangle]
-pub extern "C" fn kernel_main() {
+pub extern "C" fn kernel_main(p_multiboot2_info: usize) {
     init();
     loop {
-        let c = PS2.lock().read();
-        match KEYBOARD.lock().handle_scan_code(c as usize) {
-            keyboard::Key::Character(c) if c != 0x0 as char => print!("{}", c),
-            keyboard::Key::Command(Command::Left) => WRITER.lock().left(),
-            keyboard::Key::Command(Command::Right) => WRITER.lock().right(),
-            keyboard::Key::Command(Command::Prev) => WRITER.lock().prev_screen(),
-            keyboard::Key::Command(Command::Next) => WRITER.lock().next_screen(),
-            keyboard::Key::Command(Command::Enter) => shell::execute(),
-            _ => (),
-        }
+	let c = PS2.lock().read();
+	match KEYBOARD.lock().handle_scan_code(c as usize) {
+	    keyboard::Key::Character(c) if c != 0x0 as char => print!("{}", c),
+	    keyboard::Key::Command(Command::Left) => WRITER.lock().left(),
+	    keyboard::Key::Command(Command::Right) => WRITER.lock().right(),
+	    keyboard::Key::Command(Command::Prev) => WRITER.lock().prev_screen(),
+	    keyboard::Key::Command(Command::Next) => WRITER.lock().next_screen(),
+	    keyboard::Key::Command(Command::Enter) => shell::execute(),
+	    _ => (),
+	}
     }
 }

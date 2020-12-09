@@ -1,7 +1,8 @@
 section .multiboot_header
+align 64
 header_start:
     dd 0xe85250d6                ; magic number
-    dd 0                         ; protected mode code
+    dd 0                         ; 32-bit (protected) mode of i386
     dd header_end - header_start ; header length
 
     ; checksum
@@ -23,14 +24,17 @@ stack_high:
 
 section .text
 global _start
+extern kernel_main
 bits 32
 _start:
     mov esp, stack_high
 	xor ebp, ebp
+	mov edi, ebx
 
-	extern kernel_main
+	pushad
 	call kernel_main
-	
+	popad
+
 	cli
 .hang:	hlt
 	jmp .hang
