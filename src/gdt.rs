@@ -1,7 +1,13 @@
+//! Global Descriptor Table
+
+extern "C" {
+    fn memcpy(dst: *mut u8, src: *const u8, size: usize);
+}
+
 /// Segment Descriptor
 #[derive(Debug, Clone, Copy)]
 #[repr(C, packed)]
-pub struct GdtDesc {
+struct GdtDesc {
     lim0_15: u16,
     base0_15: u16,
     base16_23: u8,
@@ -63,15 +69,13 @@ impl fmt::Display for GdtDesc {
 }
 
 /// GDT Register
-#[derive(Debug, Clone, Copy)]
+///
+/// Memory layout of the 48 bit GDT register
+#[derive(Debug, Clone, Copy, Default)]
 #[repr(C, packed)]
 pub struct GdtR {
     pub limit: u16,
     pub base: u32,
-}
-
-extern "C" {
-    fn memcpy(dst: *mut u8, src: *const u8, size: usize);
 }
 
 #[repr(C, packed)]
@@ -105,10 +109,10 @@ struct Tss {
 }
 
 impl Tss {
-    fn new(esp: u32) -> Tss {
+    fn new(esp0: u32) -> Tss {
         Tss {
             link: 0, link_h: 0,
-            esp0: esp,
+            esp0: esp0,
             ss0: 0x18, ss0_h: 0,
             esp1: 0,
             ss1: 0, ss1_h: 0,
@@ -146,6 +150,17 @@ const GDTR: GdtR = GdtR {
     base: GDTBASE,
 };
 
+/// Initialize the Global Descriptor Table
+///
+/// The GDT is setup with those hardcoded segments:  
+/// GDT\[0\] = Null  
+/// GDT\[1\] = Kernel Code  
+/// GDT\[2\] = Kernel Data  
+/// GDT\[3\] = Kernel Stack  
+/// GDT\[4\] = User Code  
+/// GDT\[5\] = User Data  
+/// GDT\[6\] = Usert Stack  
+/// GDT\[7\] = Task State Segment  
 pub fn init() {
     let stack_high: u32;
     unsafe { asm!("lea {}, [stack_high]", out(reg) stack_high); }

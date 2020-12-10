@@ -29,11 +29,8 @@ bits 32
 _start:
     mov esp, stack_high
 	xor ebp, ebp
-	mov edi, ebx
 
-	pushad
 	call kernel_main
-	popad
 
 	cli
 .hang:	hlt

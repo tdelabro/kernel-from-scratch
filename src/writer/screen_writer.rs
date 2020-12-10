@@ -262,8 +262,8 @@ impl ScreenWriter {
     }
 
     fn clear_row(&mut self, row: usize) {
+        let buffer = self.mut_buffer();
         for col in 0..BUFFER_WIDTH {
-            let buffer = self.mut_buffer();
             unsafe {
                 write_volatile(
                     &mut buffer.chars[row][col],
@@ -289,7 +289,7 @@ impl ScreenWriter {
             for col in 0..BUFFER_WIDTH {
                 unsafe {
                     self.screens[self.index].buffer.chars[row][col] =
-                        read_volatile(&self.mut_buffer().chars[row][col]);
+                        read_volatile(&self.ref_buffer().chars[row][col]);
                     write_volatile(
                         &mut self.mut_buffer().chars[row][col],
                         self.screens[index].buffer.chars[row][col],
@@ -327,10 +327,13 @@ impl ScreenWriter {
     }
 
     
-    pub fn get_current_line(&self, ascii_line: &mut [u8; BUFFER_WIDTH]) {
+    /// Copy the last line in a buffer
+    pub fn get_bottom_line(&self, ascii_line: &mut [u8; BUFFER_WIDTH]) {
         let buffer = self.ref_buffer();
         for i in 0..BUFFER_WIDTH {
-            ascii_line[i] = buffer.chars[BUFFER_HEIGHT - 1][i].ascii_character;
+            ascii_line[i] = unsafe { 
+                read_volatile(&buffer.chars[BUFFER_HEIGHT - 1][i]).ascii_character
+            };
         }
     }
 }

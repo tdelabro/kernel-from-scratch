@@ -57,7 +57,7 @@ fn init() {
 /// It first initializes hardwares and wait for keyboard inputs to display on
 /// screen.
 #[no_mangle]
-pub extern "C" fn kernel_main(p_multiboot2_info: usize) {
+pub extern "C" fn kernel_main() {
     init();
     loop {
 	let c = PS2.lock().read();

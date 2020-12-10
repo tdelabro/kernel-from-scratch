@@ -1,9 +1,26 @@
+//! Minimal shell
+//!
+//! Handle a set of basic user instructions.
+
 use crate::writer::{WRITER, BUFFER_WIDTH};
 use core::str::SplitWhitespace;
 
+/// Execute an user shell command
+///
+/// When Carriage Return is written, try to execute the current line.
+///
+/// # Valid instructions
+/// - shutdown
+/// - reboot
+/// - dump
+///     - seg_reg
+///     - gdtr
+///     - stack \[max\]
+///     - trace \[max\]
+///
 pub fn execute() {
         let mut ascii_line = [0x0u8; BUFFER_WIDTH];
-        WRITER.lock().get_current_line(&mut ascii_line);
+        WRITER.lock().get_bottom_line(&mut ascii_line);
         println!("");
 
         let mut words = match core::str::from_utf8(&ascii_line) {
