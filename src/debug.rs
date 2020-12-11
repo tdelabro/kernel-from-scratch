@@ -23,9 +23,9 @@ pub fn stack_trace(max: usize) {
 /// Display the stack
 ///
 /// Print the stack, from top to bottom, up to `max` addresses.
-/// Each line follow this format:
-/// <address on the stack>: <content of this memory space>
-/// At the end the size of the stack is also printed.
+/// Each line follow this format:  
+/// \<address on the stack\>: \<content of this address\>  
+/// At the end the heigth of the stack is also printed.
 pub fn dump_stack(max: usize) {
     let stack_high: *const usize;
     let esp: *const usize;

@@ -4,7 +4,12 @@
 //!
 //! # Features
 //!
-//! - Keyboard inputs are printed on screen
+//! - Global Descriptor Table
+//! - VGA Screen
+//! - Keyboard input
+//! - Basic command line interpreter
+//! - Debug utilities
+//! - Power management
 
 //#![warn(missing_docs)]
 //#![warn(missing_doc_code_examples)]
@@ -68,6 +73,7 @@ pub extern "C" fn kernel_main() {
 	    keyboard::Key::Command(Command::Prev) => WRITER.lock().prev_screen(),
 	    keyboard::Key::Command(Command::Next) => WRITER.lock().next_screen(),
 	    keyboard::Key::Command(Command::Enter) => shell::execute(),
+	    keyboard::Key::Command(Command::LastCommand) => shell::load_last_command(),
 	    _ => (),
 	}
     }

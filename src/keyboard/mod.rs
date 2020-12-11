@@ -95,6 +95,8 @@ pub enum Command {
     Next = 3,
     /// Execute the current line
     Enter = 4,
+    /// Load the last command executed
+    LastCommand = 5,
 }
 
 /// Scan code interpretation
@@ -160,6 +162,7 @@ impl Keyboard {
                     0x74 if self.state.control() => Key::Command(Command::Next),
                     0x6B => Key::Command(Command::Left),
                     0x74 => Key::Command(Command::Right),
+                    0x75 => Key::Command(Command::LastCommand),
                     _ => Key::None,
                 }
             }

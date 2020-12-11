@@ -75,7 +75,7 @@ pub struct ScreenWriter {
     color_code: ColorCode,
     buffer: Unique<Buffer>,
     pub screens: [Screen; NUMBER_OF_SCREENS],
-    pub index: usize,
+    pub screen_index: usize,
 }
 
 use core::ptr::read_volatile;
@@ -97,7 +97,7 @@ impl ScreenWriter {
                     }; BUFFER_WIDTH]; BUFFER_HEIGHT],
                 },
             }; NUMBER_OF_SCREENS],
-            index: 0,
+            screen_index: 0,
         }
     }
 
@@ -288,7 +288,7 @@ impl ScreenWriter {
         for row in 0..BUFFER_HEIGHT {
             for col in 0..BUFFER_WIDTH {
                 unsafe {
-                    self.screens[self.index].buffer.chars[row][col] =
+                    self.screens[self.screen_index].buffer.chars[row][col] =
                         read_volatile(&self.ref_buffer().chars[row][col]);
                     write_volatile(
                         &mut self.mut_buffer().chars[row][col],
@@ -297,9 +297,9 @@ impl ScreenWriter {
                 }
             }
         }
-        self.screens[self.index].column_position = self.column_position;
+        self.screens[self.screen_index].column_position = self.column_position;
         self.column_position = self.screens[index].column_position;
-        self.index = index;
+        self.screen_index = index;
         self.blink_current();
     }
 
@@ -312,17 +312,17 @@ impl ScreenWriter {
 
     /// Load next screen
     pub fn next_screen(&mut self) {
-        self.load_screen(match self.index {
+        self.load_screen(match self.screen_index {
             i if i == NUMBER_OF_SCREENS - 1 => 0,
-            _ => self.index + 1,
+            _ => self.screen_index + 1,
         });
     }
 
     /// Load previous screen
     pub fn prev_screen(&mut self) {
-        self.load_screen(match self.index {
+        self.load_screen(match self.screen_index {
             0 => NUMBER_OF_SCREENS - 1,
-            _ => self.index - 1,
+            _ => self.screen_index - 1,
         });
     }
 
@@ -335,6 +335,27 @@ impl ScreenWriter {
                 read_volatile(&buffer.chars[BUFFER_HEIGHT - 1][i]).ascii_character
             };
         }
+    }
+
+    pub fn swap_bottom_line(&mut self, ascii_line: &[u8; BUFFER_WIDTH]) {
+        let color_code = self.color_code;
+        let buffer = self.mut_buffer();
+        let mut end = 0;
+        for i in 0..BUFFER_WIDTH {
+            unsafe {
+                write_volatile(
+                    &mut buffer.chars[BUFFER_HEIGHT - 1][i],
+                    ScreenChar {
+                        ascii_character: ascii_line[i],
+                        color_code: color_code,
+                    },
+                );
+            }
+            if ascii_line[i] != 0x0 {
+                end = i;
+            }
+        }
+        self.change_position(end + 1);
     }
 }
 
