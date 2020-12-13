@@ -35,6 +35,8 @@ pub mod ps2;
 pub mod debug;
 pub mod shell;
 pub mod power_management;
+pub mod page_frame;
+pub mod paging;
 
 use keyboard::{Command, KEYBOARD};
 use ps2::PS2;
@@ -64,17 +66,18 @@ fn init() {
 #[no_mangle]
 pub extern "C" fn kernel_main() {
     init();
+    paging::init();
     loop {
-	let c = PS2.lock().read();
-	match KEYBOARD.lock().handle_scan_code(c as usize) {
-	    keyboard::Key::Character(c) if c != 0x0 as char => print!("{}", c),
-	    keyboard::Key::Command(Command::Left) => WRITER.lock().left(),
-	    keyboard::Key::Command(Command::Right) => WRITER.lock().right(),
-	    keyboard::Key::Command(Command::Prev) => WRITER.lock().prev_screen(),
-	    keyboard::Key::Command(Command::Next) => WRITER.lock().next_screen(),
-	    keyboard::Key::Command(Command::Enter) => shell::execute(),
-	    keyboard::Key::Command(Command::LastCommand) => shell::load_last_command(),
-	    _ => (),
-	}
+        let c = PS2.lock().read();
+        match KEYBOARD.lock().handle_scan_code(c as usize) {
+            keyboard::Key::Character(c) if c != 0x0 as char => print!("{}", c),
+            keyboard::Key::Command(Command::Left) => WRITER.lock().left(),
+            keyboard::Key::Command(Command::Right) => WRITER.lock().right(),
+            keyboard::Key::Command(Command::Prev) => WRITER.lock().prev_screen(),
+            keyboard::Key::Command(Command::Next) => WRITER.lock().next_screen(),
+            keyboard::Key::Command(Command::Enter) => shell::execute(),
+            keyboard::Key::Command(Command::LastCommand) => shell::load_last_command(),
+            _ => (),
+        }
     }
 }
