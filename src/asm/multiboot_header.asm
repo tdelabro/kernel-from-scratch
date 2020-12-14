@@ -23,8 +23,8 @@ stack_low:
 stack_high:
 
 section .text
-global _start
 extern kernel_main
+global _start
 bits 32
 _start:
     mov esp, stack_high

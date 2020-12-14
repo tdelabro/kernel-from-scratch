@@ -1,5 +1,5 @@
 const PAGE_DIR_ADDRESS: usize = 0x21000;
-const FIRST_PAGE_TABLE: usize = 0x800000;
+const FIRST_PAGE_TABLE: usize = 0x400000;
 
 fn enable_paging() {
     unsafe {
@@ -14,7 +14,7 @@ fn enable_paging() {
     }
 }
 
-pub fn init() {
+pub fn init_identity() {
     let x: &mut [usize; 1024] = unsafe {
         core::mem::transmute::<usize, &mut [usize; 1024]>(PAGE_DIR_ADDRESS)
     };

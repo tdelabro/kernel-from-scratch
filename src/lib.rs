@@ -58,6 +58,20 @@ fn init() {
     WRITER.lock().clear_screen();
 }
 
+/// Symbols defined in the linker script
+extern "C" {
+    fn kernel_memory_end();
+    fn kernel_memory_start();
+    fn kernel_memory_text();
+    fn kernel_memory_rodata();
+    fn kernel_memory_data();
+    fn kernel_memory_bss();
+}
+
+fn get_linked_symbol_address(f: unsafe extern "C" fn()) -> u32 {
+    f as *const u32 as u32
+}
+
 /// The kernel entry point.
 ///
 /// This is the function called by grub after reading the multiboot header.
@@ -66,7 +80,14 @@ fn init() {
 #[no_mangle]
 pub extern "C" fn kernel_main() {
     init();
-    paging::init();
+    paging::init_identity();
+    println!("kmemend {:#x} {:#x} {:#x} {:#x} {:#x} {:#x}",
+        get_linked_symbol_address(kernel_memory_start),
+        get_linked_symbol_address(kernel_memory_text),
+        get_linked_symbol_address(kernel_memory_rodata),
+        get_linked_symbol_address(kernel_memory_data),
+        get_linked_symbol_address(kernel_memory_bss),
+        get_linked_symbol_address(kernel_memory_end));
     loop {
         let c = PS2.lock().read();
         match KEYBOARD.lock().handle_scan_code(c as usize) {
