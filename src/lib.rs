@@ -17,7 +17,6 @@
 #![feature(lang_items)]
 #![feature(const_fn)]
 #![feature(ptr_internals)]
-#![feature(llvm_asm)]
 #![feature(asm)]
 #![feature(associated_type_bounds)]
 #![no_std]
@@ -80,7 +79,8 @@ fn get_linked_symbol_address(f: unsafe extern "C" fn()) -> u32 {
 #[no_mangle]
 pub extern "C" fn kernel_main() {
     init();
-    paging::init_identity();
+    paging::PAGE_DIRECTORY.lock().init_identity();
+    paging::enable();
     println!("kmemend {:#x} {:#x} {:#x} {:#x} {:#x} {:#x}",
         get_linked_symbol_address(kernel_memory_start),
         get_linked_symbol_address(kernel_memory_text),

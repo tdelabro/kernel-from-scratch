@@ -163,7 +163,7 @@ const GDTR: GdtR = GdtR {
 /// GDT\[7\] = Task State Segment  
 pub fn init() {
     let stack_high: u32;
-    unsafe { asm!("lea {}, [stack_high]", out(reg) stack_high); }
+    unsafe { asm!("lea {}, [stack_high]", out(reg) stack_high, options(nostack)); }
     let tss = Tss::new(stack_high); 
 
     let gdt: [GdtDesc; GDTLEN] = [
@@ -182,20 +182,21 @@ pub fn init() {
 
     unsafe { 
         memcpy(GDTBASE as *mut u8, gdt.as_ptr() as *const u8, 8 * GDTLEN);
-        asm!("
-            lgdtl ({})
-            ljmp $0x08, $2f
-            2:
-            movw $0x18, %ax
-            movw %ax, %ss
-            movw $0x10, %ax
-            movw %ax, %ds
-            movw %ax, %es
-            movw %ax, %fs
-            movw %ax, %gs
-            movw $0x38, %ax
-            ltr %ax
-            ", in(reg) &GDTR, options(att_syntax),
+        asm!("  lgdtl ({})
+                ljmp $0x08, $1f
+            1:
+                movw $0x18, %ax
+                movw %ax, %ss
+                movw $0x10, %ax
+                movw %ax, %ds
+                movw %ax, %es
+                movw %ax, %fs
+                movw %ax, %gs
+                movw $0x38, %ax
+                ltr %ax",
+            in(reg) &GDTR,
+            out("ax") _,
+            options(att_syntax),
         );
     }
 }

@@ -30,8 +30,12 @@ pub fn dump_stack(max: usize) {
     let stack_high: *const usize;
     let esp: *const usize;
 
-    unsafe { asm!("lea {}, [stack_high]", out(reg) stack_high); }
-    unsafe { asm!("mov {}, esp", out(reg) esp); }
+    unsafe { 
+        asm!("lea {}, [stack_high]
+            mov {}, esp", 
+            out(reg) stack_high, out(reg) esp,
+            options(nostack)); 
+    }
 
     let mut c: usize = 0;
     let mut head = esp;
@@ -53,8 +57,11 @@ pub fn dump_gdtr() {
 
     unsafe {
         asm!("sgdt [{}]", in(reg) &gdtr as *const _);
-        println!("base: {:#010x}, limit: {:#06x}", gdtr.base, gdtr.limit);
     }
+
+    let base = gdtr.base;
+    let limit = gdtr.limit;
+    println!("base: {:#010x}, limit: {:#06x}", base, limit);
 }
 
 /// Display the Segment Registers
@@ -69,12 +76,12 @@ pub fn dump_segment_registers() {
     let gs: u16;
 
     unsafe {
-        asm!("mov ax, cs", out("ax") cs);
-        asm!("mov ax, ds", out("ax") ds);
-        asm!("mov ax, ss", out("ax") ss);
-        asm!("mov ax, es", out("ax") es);
-        asm!("mov ax, fs", out("ax") fs);
-        asm!("mov ax, gs", out("ax") gs);
+        asm!("mov ax, cs", out("ax") cs, options(nostack));
+        asm!("mov ax, ds", out("ax") ds, options(nostack));
+        asm!("mov ax, ss", out("ax") ss, options(nostack));
+        asm!("mov ax, es", out("ax") es, options(nostack));
+        asm!("mov ax, fs", out("ax") fs, options(nostack));
+        asm!("mov ax, gs", out("ax") gs, options(nostack));
     }
     println!("cs: {:#06x}, ds: {:#06x}, ss: {:#06x}\nes: {:#06x}, fs: {:#06x}, gs: {:#06x}",
         cs, ds, ss, es, fs, gs);

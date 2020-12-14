@@ -132,17 +132,13 @@ impl<T: InOut> UnsafePort<T> {
 /// ```
 pub fn wait() {
     unsafe {
-        llvm_asm!("out dx, al"
-            :: "{dx}"(0x80), "{al}"(0)
-            :: "intel", "volatile");
+        asm!("out dx, al", in("dx") 0x80, in("al") 0u8, options(nostack));
     }
 }
 
 fn outb(port: u16, val: u8) {
     unsafe {
-        llvm_asm!("out dx, al"
-            :: "{dx}"(port), "{al}"(val)
-            :: "intel", "volatile");
+        asm!("out dx, al", in("dx") port, in("al") val, options(nostack));
     }
 }
 
@@ -150,18 +146,14 @@ fn inb(port: u16) -> u8 {
     let result: u8;
 
     unsafe {
-        llvm_asm!("in al, dx"
-            : "={al}"(result) : "{dx}"(port)
-            :: "intel", "volatile");
+        asm!("in al, dx", out("al") result, in("dx") port, options(nostack));
     }
     result
 }
 
 fn outw(port: u16, val: u16) {
     unsafe {
-        llvm_asm!("out dx, ax"
-            :: "{dx}"(port), "{ax}"(val)
-            :: "intel", "volatile");
+        asm!("out dx, ax", in("dx") port, in("ax") val, options(nostack));
     }
 }
 
@@ -169,18 +161,14 @@ fn inw(port: u16) -> u16 {
     let result: u16;
 
     unsafe {
-        llvm_asm!("in ax, dx"
-            : "={ax}"(result) : "{dx}"(port)
-            :: "intel", "volatile");
+        asm!("in ax, dx", out("ax") result, in("dx") port, options(nostack));
     }
     result
 }
 
 fn outl(port: u16, val: u32) {
     unsafe {
-        llvm_asm!("out dx, eax"
-            :: "{dx}"(port), "{eax}"(val)
-            :: "intel", "volatile");
+        asm!("out dx, eax", in("dx") port, in("eax") val, options(nostack));
     }
 }
 
@@ -188,9 +176,7 @@ fn inl(port: u16) -> u32 {
     let result: u32;
 
     unsafe {
-        llvm_asm!("in eax, dx"
-            : "={eax}"(result) : "{dx}"(port)
-            :: "intel", "volatile");
+        asm!("in eax, dx", out("eax") result, in("dx") port, options(nostack));
     }
     result
 }
