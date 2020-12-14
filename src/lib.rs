@@ -79,7 +79,7 @@ fn get_linked_symbol_address(f: unsafe extern "C" fn()) -> u32 {
 #[no_mangle]
 pub extern "C" fn kernel_main() {
     init();
-    paging::PAGE_DIRECTORY.lock().init_identity();
+    unsafe { paging::PAGE_DIRECTORY.lock().init_identity(); }
     paging::enable();
     println!("kmemend {:#x} {:#x} {:#x} {:#x} {:#x} {:#x}",
         get_linked_symbol_address(kernel_memory_start),

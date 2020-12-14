@@ -1,5 +1,5 @@
 const PAGE_DIR_ADDRESS: usize = 0x21000;
-const FIRST_PAGE_TABLE: usize = 0x400000;
+const FIRST_PAGE_TABLE_ADDRESS: usize = 0x400000;
 
 pub fn enable() {
     unsafe {
@@ -36,54 +36,46 @@ impl PageDirectoryEntry {
     }
 }
 
-pub struct PageDirectory(Unique<[usize; 1024]>);
+pub struct PageManager(Unique<[usize; 1024]>, Unique<[[usize; 1024]; 1024]>);
 
-impl core::convert::AsRef<[usize; 1024]> for PageDirectory {
-   fn as_ref(&self) -> &[usize; 1024] {
-        unsafe { self.0.as_ref() }
-   }
+impl PageManager {
+    fn page_directory(&self) -> Unique<[usize; 1024]> {
+        self.0
+    }
+
+    fn page_tables(&self) -> Unique<[[usize; 1024]; 1024]> {
+        self.1
+    }
 }
 
-impl core::convert::AsMut<[usize; 1024]> for PageDirectory {
-   fn as_mut(&mut self) -> &mut [usize; 1024] {
-        unsafe { self.0.as_mut() }
-   }
-}
-
-impl PageDirectory {
-    pub fn init_identity(&mut self) {
-        self.as_mut().iter_mut()
-            .enumerate()
-            .for_each(|(i, v)| *v = (FIRST_PAGE_TABLE + i*4*1024) | 3);
-
-        let y: &mut [[usize; 1024]; 1024]  = unsafe {
-            core::mem::transmute::<usize, &mut [[usize; 1024]; 1024]>(FIRST_PAGE_TABLE)
-        };
+impl PageManager {
+    pub unsafe fn init_identity(&mut self) {
         for i in 0..1024 {
+            self.page_directory().as_mut()[i] = 
+                &self.page_tables().as_ref()[i] as *const _ as usize | 3;
             for j in 0..1024 {
-                y[i][j] = ((i*1024 + j)*4096) | 3;
+                self.page_tables().as_mut()[i][j] = ((i*1024 + j)*4096) | 3;
             }
         }
-        translate(0x0);
-        translate(0x10000);
-        translate(0x123456b);
+        assert_eq!(0, self.v_to_p(0));
+        assert_eq!(0x1000, self.v_to_p(0x1000));
+        assert_eq!(0x8823EF, self.v_to_p(0x8823EF));
+    }
+
+    fn v_to_p(&self, v: usize) -> usize {
+        let d_offset = v >> 22;
+        let t_offset = (v & 0x3FF000) >> 12;
+        let p_offset = v & 0xFFF;
+
+        let d_entry = unsafe { self.page_directory().as_ref()[d_offset] };
+        let t_entry = unsafe {
+            (*((d_entry & 0xFFFFF000) as *const [u32; 1024]))[t_offset]
+        };
+        (t_entry & 0xFFFFF000) as usize + p_offset 
     }
 }
 
-fn translate(add: u32) {
-    let d_offset = add >> 22;
-    let t_offset = (add & 0x3FF000) >> 12;
-    let p_offset = add & 0xFFF;
-    println!("{} {} {}", d_offset, t_offset, p_offset);
-    unsafe {
-        let d_entry: u32 = *((PAGE_DIR_ADDRESS as u32 + d_offset*4) as *const u32);
-        let t_entry: u32 = *(((d_entry & 0xFFFFF000) + t_offset*4) as *const u32);
-        let padd: u32 = (t_entry & 0xFFFFF000) + p_offset;
-        println!("d_entry: {:#x} t_entry: {:#x}", d_entry, t_entry);
-        println!("vadd {:#x} padd {:#x}", add, padd);
-    }
-}
-
-pub static PAGE_DIRECTORY: Mutex<PageDirectory> = Mutex::new(PageDirectory(
-        unsafe { Unique::new_unchecked(PAGE_DIR_ADDRESS as *mut _) }));
+pub static PAGE_DIRECTORY: Mutex<PageManager> = Mutex::new(PageManager(
+        unsafe { Unique::new_unchecked(PAGE_DIR_ADDRESS as *mut _) },
+        unsafe { Unique::new_unchecked(FIRST_PAGE_TABLE_ADDRESS as *mut _) }));
 
