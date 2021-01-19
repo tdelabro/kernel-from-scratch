@@ -1,7 +1,7 @@
 ARCH = i686
 OS = kfs
 TARGET = $(ARCH)-$(OS)
-OPT_DIR = opt/
+OPT_DIR = cross-compiled-toolchain/opt/
 
 # Sources
 SRC_DIR = src/
@@ -21,6 +21,10 @@ ISO_DIR = $(addprefix $(BUILD_DIR), isodir/)
 BOOT_DIR = $(addprefix $(ISO_DIR), boot/)
 GRUB_DIR = $(addprefix $(BOOT_DIR), grub/)
 
+CC = $(addprefix $(OPT_DIR), bin/i686-elf-gcc)
+GRUB_MKRESCUE = $(addprefix $(OPT_DIR), bin/grub-mkrescue)
+
+
 OBJ = $(addprefix $(OBJ_DIR), $(ASM:.asm=.o))
 KERNEL = $(addprefix $(BUILD_DIR), kernel.bin)
 ISO = os.iso
@@ -33,12 +37,9 @@ default: $(ISO)
 setup: $(OPT_DIR)
 	rustup toolchain install nightly
 	rustup component add rust-src
-	sudo apt install xorriso
-	sudo apt install qemu
-	cargo install rustfilt
 
 $(OPT_DIR):
-	tar -Jxvf cross-compiler.tar.xz
+	cd cross-compiled-toolchain && sh install-toolchain.sh
 
 $(BUILD_DIR):
 	mkdir -p build
@@ -53,13 +54,13 @@ lib:
 	cargo build --release --target $(TARGET).json
 
 $(KERNEL): $(OPT_DIR) $(OBJ_DIR) $(OBJ) lib
-	opt/bin/i686-elf-gcc -T $(LINKER) -o $@ -ffreestanding -fno-builtin -fno-stack-protector -fno-omit-frame-pointer -fno-rtti -nostdlib -nodefaultlibs $(OBJ) $(LIB) -lgcc
+	$(CC) -T $(LINKER) -o $@ -ffreestanding -fno-builtin -fno-stack-protector -fno-omit-frame-pointer -fno-rtti -nostdlib -nodefaultlibs $(OBJ) $(LIB) -lgcc
 
 $(ISO): $(BUILD_DIR) $(KERNEL)
 	mkdir -p $(GRUB_DIR)
 	cp $(GRUB_CFG) $(GRUB_DIR)
 	cp $(KERNEL) $(BOOT_DIR)
-	grub-mkrescue -o $@ $(ISO_DIR)
+	$(GRUB_MKRESCUE) -o $@ $(ISO_DIR)
 
 kernel: $(KERNEL)
 

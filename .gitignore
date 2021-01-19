@@ -16,9 +16,11 @@ Cargo.lock
 /target
 Cargo.lock
 
-# Cross compiler archive
-cross-compiler.tar.xz
+# Cross compiler
+cross-compiled-toolchain/opt/
+cross-compiled-toolchain/src/
 
 #build
 /build
 os.iso
+
