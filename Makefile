@@ -69,7 +69,7 @@ iso: $(ISO)
 doc:
 	cargo doc --target $(TARGET).json
 
-run: build
+run: $(ISO)
 	qemu-system-i386 -cdrom $(ISO)
 
 clean:

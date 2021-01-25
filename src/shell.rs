@@ -7,7 +7,7 @@ use core::str::SplitWhitespace;
 
 use spin::Mutex;
 
-static LAST_COMMAND: Mutex<[u8; BUFFER_WIDTH]> = Mutex::new(
+pub static LAST_COMMAND: Mutex<[u8; BUFFER_WIDTH]> = Mutex::new(
     [0u8; BUFFER_WIDTH]);
 
 /// Execute an user shell command
@@ -36,6 +36,7 @@ pub fn execute() {
         Some("dump") => dump(words),
         Some("shutdown") => crate::power_management::shutdown(),
         Some("reboot") => crate::power_management::reboot(),
+        Some("clear") => WRITER.lock().clear_screen(),
         _ => (),
     };
 
@@ -56,6 +57,7 @@ fn dump(mut words: SplitWhitespace) {
     match words.next() {
         Some("seg_reg") => crate::debug::dump_segment_registers(),
         Some("gdtr") => crate::debug::dump_gdtr(),
+        Some("gdt") => crate::debug::dump_gdt(),
         Some("stack") => crate::debug::dump_stack(get_number(words)),
         Some("trace") => crate::debug::stack_trace(get_number(words)),
         _ => (),

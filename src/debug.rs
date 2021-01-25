@@ -47,21 +47,21 @@ pub fn dump_stack(max: usize) {
     println!("Stack size: {}", stack_high as usize - esp as usize);
 }
 
-use crate::gdt::GdtR;
+use crate::gdt::{GdtR};
 
 /// Display the Global Descriptor Table Register
 ///
 /// Print it's base and limit values.
 pub fn dump_gdtr() {
-    let gdtr = GdtR::default();
+    println!("{}", GdtR::current());
+}
 
-    unsafe {
-        asm!("sgdt [{}]", in(reg) &gdtr as *const _);
+pub fn dump_gdt() {
+    let mut i = 0;
+    while let Some(desc) = GdtR::get_desc(i) {
+        println!("Descriptor at index [{}]:\n{}\n", i, desc);
+        i += 1;
     }
-
-    let base = gdtr.base;
-    let limit = gdtr.limit;
-    println!("base: {:#010x}, limit: {:#06x}", base, limit);
 }
 
 /// Display the Segment Registers
@@ -86,3 +86,19 @@ pub fn dump_segment_registers() {
     println!("cs: {:#06x}, ds: {:#06x}, ss: {:#06x}\nes: {:#06x}, fs: {:#06x}, gs: {:#06x}",
         cs, ds, ss, es, fs, gs);
 }
+
+use crate::external_symbols::*;
+
+/// Print the addresses of symbols defined in the linker script
+/// 
+/// Begining and enf oth the kernel sections and stack
+pub fn print_kernel_sections_addresses() {
+    println!("kernel: start {:#x} end {:#x}", get_ext_symb_add(kernel_start), get_ext_symb_add(kernel_end));
+    println!("text: start {:#x} end {:#x}", get_ext_symb_add(section_text_start), get_ext_symb_add(section_text_end));
+    println!("rodata: start {:#x} end {:#x}", get_ext_symb_add(section_rodata_start), get_ext_symb_add(section_rodata_end));
+    println!("data: start {:#x} end {:#x}", get_ext_symb_add(section_data_start), get_ext_symb_add(section_data_end));
+    println!("bss: start {:#x} end {:#x}", get_ext_symb_add(section_bss_start), get_ext_symb_add(section_bss_end));
+    println!("common bss sep: {:#x}", get_ext_symb_add(common_bss_sep));
+    println!("stack: low {:#x} high {:#x}", get_ext_symb_add(stack_low),  get_ext_symb_add(stack_high));
+}
+

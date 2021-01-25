@@ -36,6 +36,7 @@ pub mod shell;
 pub mod power_management;
 pub mod page_frame;
 pub mod paging;
+pub mod external_symbols;
 
 use keyboard::{Command, KEYBOARD};
 use ps2::PS2;
@@ -43,8 +44,8 @@ use writer::WRITER;
 
 /// This function is called on panic.
 #[panic_handler]
-fn panic(_info: &PanicInfo) -> ! {
-    println!("\nPANIC");
+fn panic(info: &PanicInfo) -> ! {
+    println!("{}", info);
     println!("Stack Trace:");
     debug::stack_trace(20);
     loop {}
@@ -52,23 +53,8 @@ fn panic(_info: &PanicInfo) -> ! {
 
 fn init() {
     gdt::init();
-    WRITER.lock().clear_screen();
     PS2.lock().init();
-    WRITER.lock().clear_screen();
-}
-
-/// Symbols defined in the linker script
-extern "C" {
-    fn kernel_memory_end();
-    fn kernel_memory_start();
-    fn kernel_memory_text();
-    fn kernel_memory_rodata();
-    fn kernel_memory_data();
-    fn kernel_memory_bss();
-}
-
-fn get_linked_symbol_address(f: unsafe extern "C" fn()) -> u32 {
-    f as *const u32 as u32
+    paging::init();
 }
 
 /// The kernel entry point.
@@ -79,25 +65,15 @@ fn get_linked_symbol_address(f: unsafe extern "C" fn()) -> u32 {
 #[no_mangle]
 pub extern "C" fn kernel_main() {
     init();
-    unsafe { paging::PAGE_DIRECTORY.lock().init_identity(); }
-    paging::enable();
-    println!("kmemend {:#x} {:#x} {:#x} {:#x} {:#x} {:#x}",
-        get_linked_symbol_address(kernel_memory_start),
-        get_linked_symbol_address(kernel_memory_text),
-        get_linked_symbol_address(kernel_memory_rodata),
-        get_linked_symbol_address(kernel_memory_data),
-        get_linked_symbol_address(kernel_memory_bss),
-        get_linked_symbol_address(kernel_memory_end));
+    debug::print_kernel_sections_addresses();
+    paging::list_mappings();
     loop {
         let c = PS2.lock().read();
         match KEYBOARD.lock().handle_scan_code(c as usize) {
             keyboard::Key::Character(c) if c != 0x0 as char => print!("{}", c),
             keyboard::Key::Command(Command::Left) => WRITER.lock().left(),
             keyboard::Key::Command(Command::Right) => WRITER.lock().right(),
-            keyboard::Key::Command(Command::Prev) => WRITER.lock().prev_screen(),
-            keyboard::Key::Command(Command::Next) => WRITER.lock().next_screen(),
             keyboard::Key::Command(Command::Enter) => shell::execute(),
-            keyboard::Key::Command(Command::LastCommand) => shell::load_last_command(),
             _ => (),
         }
     }

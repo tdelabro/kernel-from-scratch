@@ -2,6 +2,7 @@ const N_PAGES: usize = 1024 * 1024;
 const BITMAP_LEN: usize = N_PAGES / 32;
 const PAGE_SIZE_4K: usize = 4096;
 
+#[derive(Debug)]
 pub struct FrameManager {
     bitmap: [u32; BITMAP_LEN],
     skip: usize,
@@ -11,6 +12,11 @@ pub struct FrameManager {
 pub struct PageFrame(usize);
 
 impl PageFrame {
+    fn new(address: usize) -> PageFrame {
+        assert_eq!(0, address & 0xFFF, "frame address is not aligned: {:#10x}", address);
+        PageFrame(address)
+    }
+
     fn index(&self) -> usize {
         self.0 / PAGE_SIZE_4K / 32
     }
@@ -40,20 +46,20 @@ impl FrameManager {
 
     fn mark_as_used(&mut self, page: PageFrame) {
         let i = page.index();
-        let j = page.offset();
+        let o = page.offset();
 
-        assert!(self.bitmap[i] & (0x80000000 >> j) == 0);
+        assert!(self.bitmap[i] & (0x80000000 >> o) == 0);
 
-        self.bitmap[i] |= 0x80000000 >> j;
+        self.bitmap[i] |= 0x80000000 >> o;
         self.skip = i;
     }
     fn mark_as_available(&mut self, page: PageFrame) {
         let i = page.index();
-        let j = page.offset();
+        let o = page.offset();
 
-        assert!(self.bitmap[i] & (0x80000000 >> j) != 0);
+        assert!(self.bitmap[i] & (0x80000000 >> o) != 0);
 
-        self.bitmap[i] &= !(0x80000000 >> j);
+        self.bitmap[i] &= !(0x80000000 >> o);
         self.skip = i;
     }
     
@@ -63,9 +69,18 @@ impl FrameManager {
         p.address()
     }
 
-    pub fn get_page_frame(&mut self, address: usize) -> usize {
-        self.mark_as_used(PageFrame(address));
-        address
+    pub fn get_page_frame(&mut self, address: usize) {
+        self.mark_as_used(PageFrame::new(address));
+    }
+
+    pub fn free_page(&mut self, address: usize) {
+        self.mark_as_available(PageFrame::new(address))
+    }
+
+    pub fn is_available(&self, address: usize) -> bool {
+        let page = PageFrame::new(address);
+
+        self.bitmap[page.index()] & (0x80000000 >> page.offset()) == 0
     }
 }
 
