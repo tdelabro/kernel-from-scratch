@@ -41,6 +41,7 @@ pub mod external_symbols;
 use keyboard::{Command, KEYBOARD};
 use ps2::PS2;
 use writer::WRITER;
+use paging::PAGING;
 
 /// This function is called on panic.
 #[panic_handler]
@@ -54,7 +55,7 @@ fn panic(info: &PanicInfo) -> ! {
 fn init() {
     gdt::init();
     PS2.lock().init();
-    paging::init();
+    PAGING.lock().init();
 }
 
 /// The kernel entry point.
@@ -66,7 +67,10 @@ fn init() {
 pub extern "C" fn kernel_main() {
     init();
     debug::print_kernel_sections_addresses();
-    paging::list_mappings();
+    match unsafe { PAGING.lock().get_table(0) } {
+        None => println!("None"),
+        Some(t) => println!("{}", t),
+    }
     loop {
         let c = PS2.lock().read();
         match KEYBOARD.lock().handle_scan_code(c as usize) {

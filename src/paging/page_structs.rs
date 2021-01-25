@@ -50,10 +50,12 @@ impl fmt::Display for PageTable {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         for entry in self.ref_table() {
             if entry.is_present() {
-                write!(f, "{}\n", entry);
+                if let Err(e) = write!(f, "{}\n", entry) {
+                    return Err(e)
+                }
             }
         }
-        write!(f, "")
+        Ok(())
     }
 }
 
@@ -156,9 +158,11 @@ impl fmt::Display for PageDirectory {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         for entry in self.ref_dir() {
             if entry.is_present() {
-                write!(f, "{}\n", entry);
+                if let Err(e) = write!(f, "{}\n", entry) {
+                    return Err(e)
+                }
             }
         }
-        write!(f, "")
+        Ok(())
     }
 }
