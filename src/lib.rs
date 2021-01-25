@@ -66,11 +66,8 @@ fn init() {
 #[no_mangle]
 pub extern "C" fn kernel_main() {
     init();
+    println!("{}", unsafe { PAGING.lock().get_dir() });
     debug::print_kernel_sections_addresses();
-    match unsafe { PAGING.lock().get_table(0) } {
-        None => println!("None"),
-        Some(t) => println!("{}", t),
-    }
     loop {
         let c = PS2.lock().read();
         match KEYBOARD.lock().handle_scan_code(c as usize) {

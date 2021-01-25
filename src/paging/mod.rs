@@ -25,12 +25,8 @@ impl Paging {
         self.0
     }
 
-    fn activate(&mut self) {
-        self.0 = true;
-    }
-
-    fn deactivate(&mut self) {
-        self.0 = false;
+    fn set(&mut self, val: bool) {
+        self.0 = val;
     }
 
     pub unsafe fn get_dir(&self) -> PageDirectory {
@@ -53,10 +49,8 @@ impl Paging {
         for i in 0..dir.ref_dir().len() - 1 {
             if dir.ref_dir()[i].is_present() {
                 let table = unsafe { PageTable(Unique::new_unchecked((0xFFC00000usize + 4 * i) as *mut _)) };
-                for j in 0..1024 {
-                    if table.ref_table()[j].is_present() {
-                        println!("virtual: {:#010x} physical: {:#010x}", i << 22 | j << 12, table.ref_table()[j].page_frame_address());
-                    }
+                for (j, entry) in table.ref_table().iter().enumerate().filter(|(_, e)| e.is_present()) {
+                    println!("virtual: {:#010x} physical: {:#010x}", i << 22 | j << 12, entry.page_frame_address());
                 }
             }
         }
@@ -77,18 +71,15 @@ impl Paging {
         page_directory.map_range_pages(
             get_ext_symb_add(kernel_start),
             get_ext_symb_add(kernel_end),
-            get_ext_symb_add(kernel_start),
-            );
+            get_ext_symb_add(kernel_start));
 
         // Recursive page directory trick
         page_directory.set_entry(1023, PAGE_DIR_ADDRESS, 0x1); 
         enable(PAGE_DIR_ADDRESS);
-        self.activate();
+        self.set(true);
     }
-
 }
 
 use spin::Mutex;
 
 pub static PAGING: Mutex<Paging> = Mutex::new(Paging(false));
-

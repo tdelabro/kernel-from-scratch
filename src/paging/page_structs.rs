@@ -24,7 +24,8 @@ impl PageTableEntry {
 
 impl fmt::Display for PageTableEntry {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "Address: {:#010x}, Present: {}, Write/Read: {}", self.page_frame_address(), self.is_present(), self.is_wr())
+        write!(f, "Frame physical address: {:#010x}, Present: {}, Write/Read: {}",
+               self.page_frame_address(), self.is_present(), self.is_wr())
     }
 }
 
@@ -48,11 +49,9 @@ impl PageTable {
 
 impl fmt::Display for PageTable {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        for entry in self.ref_table() {
-            if entry.is_present() {
-                if let Err(e) = write!(f, "{}\n", entry) {
-                    return Err(e)
-                }
+        for (idx, entry) in self.ref_table().iter().enumerate().filter(|(_, e)| e.is_present()) {
+            if let Err(e) = write!(f, "{:04}: {}\n", idx, entry) {
+                return Err(e)
             }
         }
         Ok(())
@@ -82,7 +81,8 @@ impl PageDirectoryEntry {
 
 impl fmt::Display for PageDirectoryEntry {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "Address: {:#010x}, Present: {}, Write/Read: {}", self.page_table_address(), self.is_present(), self.is_wr())
+        write!(f, "Table physical address: {:#010x}, Present: {}, Write/Read: {}",
+               self.page_table_address(), self.is_present(), self.is_wr())
     }
 }
 
@@ -120,7 +120,6 @@ impl PageDirectory {
     }
 
     pub fn map_pages(&mut self, physical_page_address: usize, virtual_page_address: usize) {
-        println!("in {:#010x} {:#010x}", physical_page_address, virtual_page_address);
         assert_eq!(0, physical_page_address & 0xFFF, "physical address is not aligned: {:#10x}", physical_page_address);
         assert_eq!(0, virtual_page_address & 0xFFF, "physical address is not aligned: {:#10x}", virtual_page_address);
         assert!(BITMAP.lock().is_available(physical_page_address),
@@ -156,11 +155,9 @@ impl PageDirectory {
 
 impl fmt::Display for PageDirectory {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        for entry in self.ref_dir() {
-            if entry.is_present() {
-                if let Err(e) = write!(f, "{}\n", entry) {
-                    return Err(e)
-                }
+        for (idx, entry) in self.ref_dir().iter().enumerate().filter(|(_, e)| e.is_present()) {
+            if let Err(e) = write!(f, "{:04}: {}\n", idx, entry) {
+                return Err(e)
             }
         }
         Ok(())
