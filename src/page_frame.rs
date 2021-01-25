@@ -2,7 +2,6 @@ const N_PAGES: usize = 1024 * 1024;
 const BITMAP_LEN: usize = N_PAGES / 32;
 const PAGE_SIZE_4K: usize = 4096;
 
-#[derive(Debug)]
 pub struct FrameManager {
     bitmap: [u32; BITMAP_LEN],
     skip: usize,
@@ -62,7 +61,7 @@ impl FrameManager {
         self.bitmap[i] &= !(0x80000000 >> o);
         self.skip = i;
     }
-    
+
     pub fn get_available_page_frame(&mut self) -> usize {
         let p = self.next_available();
         self.mark_as_used(p);
@@ -81,6 +80,26 @@ impl FrameManager {
         let page = PageFrame::new(address);
 
         self.bitmap[page.index()] & (0x80000000 >> page.offset()) == 0
+    }
+}
+
+use core::fmt;
+
+impl fmt::Display for FrameManager {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        if let Err(e) =  write!(f, "Used frames:\n") {
+            return Err(e);
+        }
+        for (i, u) in self.bitmap.iter().enumerate() {
+            for j in 0..32 {
+                if u & (0x80000000 >> j) != 0 {
+                    if let Err(e) =  write!(f, "{:#010x} ",  PAGE_SIZE_4K * (32 * i + j)) {
+                        return Err(e);
+                    }
+                }
+            }
+        }
+        Ok(())
     }
 }
 

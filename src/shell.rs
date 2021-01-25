@@ -60,6 +60,7 @@ fn dump(mut words: SplitWhitespace) {
         Some("gdt") => crate::debug::dump_gdt(),
         Some("stack") => crate::debug::dump_stack(get_number(words)),
         Some("trace") => crate::debug::stack_trace(get_number(words)),
+        Some("bitmap") => crate::debug::dump_bitmap(),
         _ => (),
     };
 }

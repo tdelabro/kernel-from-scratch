@@ -102,3 +102,6 @@ pub fn print_kernel_sections_addresses() {
     println!("stack: low {:#x} high {:#x}", get_ext_symb_add(stack_low),  get_ext_symb_add(stack_high));
 }
 
+pub fn dump_bitmap() {
+    println!("{}", crate::page_frame::BITMAP.lock());
+}

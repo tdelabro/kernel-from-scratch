@@ -113,12 +113,6 @@ impl PageDirectory {
         }
     }
 
-    fn map_n_pages(&mut self, physical_page_address: usize, virtual_page_address: usize, n_pages: usize) {
-        for i in 0..n_pages {
-            self.map_pages(physical_page_address + i*0x1000, virtual_page_address + i*0x1000);
-        }
-    }
-
     pub fn map_pages(&mut self, physical_page_address: usize, virtual_page_address: usize) {
         assert_eq!(0, physical_page_address & 0xFFF, "physical address is not aligned: {:#10x}", physical_page_address);
         assert_eq!(0, virtual_page_address & 0xFFF, "physical address is not aligned: {:#10x}", virtual_page_address);

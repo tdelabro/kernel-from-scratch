@@ -42,6 +42,7 @@ use keyboard::{Command, KEYBOARD};
 use ps2::PS2;
 use writer::WRITER;
 use paging::PAGING;
+use page_frame::BITMAP;
 
 /// This function is called on panic.
 #[panic_handler]
@@ -66,8 +67,8 @@ fn init() {
 #[no_mangle]
 pub extern "C" fn kernel_main() {
     init();
-    println!("{}", unsafe { PAGING.lock().get_dir() });
     debug::print_kernel_sections_addresses();
+    println!("{}", BITMAP.lock());
     loop {
         let c = PS2.lock().read();
         match KEYBOARD.lock().handle_scan_code(c as usize) {
