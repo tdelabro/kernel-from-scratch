@@ -9,7 +9,7 @@ impl PageTableEntry {
         PageTableEntry(address | flags)
     }
 
-    pub fn page_frame_address(&self) -> usize {
+    pub fn physical_memory_management_address(&self) -> usize {
         (self.0 & 0xFFFFF000) as usize
     }
 
@@ -25,7 +25,7 @@ impl PageTableEntry {
 impl fmt::Display for PageTableEntry {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "Frame physical address: {:#010x}, Present: {}, Write/Read: {}",
-               self.page_frame_address(), self.is_present(), self.is_wr())
+               self.physical_memory_management_address(), self.is_present(), self.is_wr())
     }
 }
 
@@ -86,7 +86,7 @@ impl fmt::Display for PageDirectoryEntry {
     }
 }
 
-use crate::page_frame::BITMAP;
+use crate::physical_memory_management::BITMAP;
 
 pub struct PageDirectory(pub Unique<[PageDirectoryEntry; 1024]>);
 
@@ -116,8 +116,6 @@ impl PageDirectory {
     pub fn map_pages(&mut self, physical_page_address: usize, virtual_page_address: usize) {
         assert_eq!(0, physical_page_address & 0xFFF, "physical address is not aligned: {:#10x}", physical_page_address);
         assert_eq!(0, virtual_page_address & 0xFFF, "physical address is not aligned: {:#10x}", virtual_page_address);
-        assert!(BITMAP.lock().is_available(physical_page_address),
-            "frame already used at address {:#10x}", physical_page_address);
 
         let d_offset = virtual_page_address >> 22;
         let t_offset = (virtual_page_address & 0x3FF000) >> 12;
@@ -126,17 +124,13 @@ impl PageDirectory {
         let page_table_add: usize;
         
         if !self.ref_dir()[d_offset].is_present() {
-            BITMAP.lock().get_page_frame(physical_page_address);
-            page_table_add = BITMAP.lock().get_available_page_frame();
+            page_table_add = BITMAP.lock().kalloc_frame();
             page_table = unsafe { PageTable(Unique::new_unchecked(page_table_add as *mut _)) };
             page_table.clear();
             self.mut_dir()[d_offset] = PageDirectoryEntry::new(page_table_add, 0x1);
         } else {
             page_table_add = self.ref_dir()[d_offset].page_table_address();
             page_table = unsafe { PageTable(Unique::new_unchecked(page_table_add as *mut _)) };
-            assert!(!page_table.ref_table()[t_offset].is_present(),
-                "page table entry was already present with virtual address {:#10x}", virtual_page_address);
-            BITMAP.lock().get_page_frame(physical_page_address)
         }
         page_table.mut_table()[t_offset] = PageTableEntry::new(physical_page_address, 0x1);
     }
@@ -144,7 +138,6 @@ impl PageDirectory {
     pub fn set_entry(&mut self, index: usize, address: usize, tags: usize) {
         self.mut_dir()[index] = PageDirectoryEntry::new(address, tags);
     }
-
 }
 
 impl fmt::Display for PageDirectory {

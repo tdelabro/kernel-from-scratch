@@ -62,17 +62,17 @@ impl FrameManager {
         self.skip = i;
     }
 
-    pub fn get_available_page_frame(&mut self) -> usize {
+    pub fn kalloc_frame(&mut self) -> usize {
         let p = self.next_available();
         self.mark_as_used(p);
         p.address()
     }
 
-    pub fn get_page_frame(&mut self, address: usize) {
+    pub fn kalloc_frame_by_address(&mut self, address: usize) {
         self.mark_as_used(PageFrame::new(address));
     }
 
-    pub fn free_page(&mut self, address: usize) {
+    pub fn free_frame(&mut self, address: usize) {
         self.mark_as_available(PageFrame::new(address))
     }
 

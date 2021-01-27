@@ -21,41 +21,79 @@ impl SegmentDescriptor {
             base24_31: ((base & 0xff000000) >> 24) as u8,
         }
     }
+
+    fn base(&self) -> usize {
+        self.base0_15 as usize | (self.base16_23 as usize) << 16 | (self.base24_31 as usize) << 24
+    }
+
+    fn limit(&self) -> usize {
+        self.lim0_15 as usize | ((self.lim16_19_flags & 0xf) as usize) << 16
+    }
+
+    fn present(&self) -> bool {
+        self.access & 0x80 != 0
+    }
+
+    fn privilege(&self) -> u8 {
+        (self.access & 0x60) >> 5
+    }
+
+    fn desc_type(&self) -> bool {
+        self.access & 0x10 != 0
+    }
+
+    fn executable(&self) -> bool {
+        self.access & 0x8 != 0
+    }
+
+    fn direction_conforming(&self) -> bool {
+        self.access & 0x4 != 0
+    }
+
+    fn readable_writable(&self) -> bool {
+        self.access & 0x2 != 0
+    }
+
+    fn accessed(&self) -> bool {
+        self.access & 0x1 != 0
+    }
+
+    fn granularity(&self) -> bool {
+        self.lim16_19_flags & 0x80 != 0
+    }
+
+    fn operand_size(&self) -> bool {
+        self.lim16_19_flags & 0x40 != 0
+    }
+
+    fn long(&self) -> bool {
+        self.lim16_19_flags & 0x20 != 0
+    }
+
+    fn available(&self) -> bool {
+        self.lim16_19_flags & 0x10 != 0
+    }
 }
 
 use core::fmt;
 
 impl fmt::Display for SegmentDescriptor {
         fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result { 
-            let base: u32 = self.base0_15 as u32
-                | (self.base16_23 as u32) << 16 | (self.base24_31 as u32) << 24;
-            let limit: u32 = self.lim0_15 as u32
-                | ((self.lim16_19_flags & 0xf) as u32) << 16;
-            let present: bool = (self.access & 0x80) != 0;
-            let privilege: u8 = (self.access & 0x60) >> 5;
-            let desc_type: bool = (self.access & 0x10) != 0;
-            let executable: bool = (self.access & 0x8) != 0;
-            let dc: bool = (self.access & 0x4) != 0;
-            let rw: bool = (self.access & 0x2) != 0;
-            let accessed: bool = (self.access & 0x1) != 0;
-            let granularity: bool = (self.lim16_19_flags & 0x80) != 0;
-            let size: bool = (self.lim16_19_flags & 0x40) != 0;
-
-            write!(f, "base: {:#010x}, limit: {}\npresent: {}, privilege: {}\ntype {}, dc: {}, rw: {}\naccessed: {}, granularity: {}, size: {}",
-                base, limit, present, privilege,
-                match desc_type {
+            write!(f, "base: {:#010x}, limit: {:#07x}\npresent: {}, privilege: {}\ntype {}, dc: {}, rw: {}\naccessed: {}, granularity: {}, size: {}",
+                self.base(), self.limit(), self.present(), self.privilege(),
+                match self.desc_type() {
                     false => "System",
-                    true => match executable {
+                    true => match self.executable() {
                         false => "Data",
                         true => "Code",
                     }
                 },
-                dc, rw, accessed,
-                match granularity {
+                self.direction_conforming(), self.readable_writable(), self.accessed(),
+                match self.granularity() {
                     false => "1B",
                     true => "4KiB",
                 },
-                match size {
+                match self.operand_size(){
                     false => "16bit",   
                     true => "32bit",   
                 })

@@ -34,15 +34,15 @@ pub mod ps2;
 pub mod debug;
 pub mod shell;
 pub mod power_management;
-pub mod page_frame;
-pub mod paging;
+pub mod physical_memory_management;
+pub mod virtual_memory_management;
 pub mod external_symbols;
 
 use keyboard::{Command, KEYBOARD};
 use ps2::PS2;
 use writer::WRITER;
-use paging::PAGING;
-use page_frame::BITMAP;
+use virtual_memory_management::PAGE_DIRECTORY;
+use physical_memory_management::BITMAP;
 
 /// This function is called on panic.
 #[panic_handler]
@@ -54,9 +54,14 @@ fn panic(info: &PanicInfo) -> ! {
 }
 
 fn init() {
+    // Global Descriptor Table
     gdt::init();
+
+    // Paging
+    virtual_memory_management::init();
+
+    // Keyboard input
     PS2.lock().init();
-    PAGING.lock().init();
 }
 
 /// The kernel entry point.
@@ -67,8 +72,7 @@ fn init() {
 #[no_mangle]
 pub extern "C" fn kernel_main() {
     init();
-    debug::print_kernel_sections_addresses();
-    println!("{}", BITMAP.lock());
+    virtual_memory_management::list_mappings();
     loop {
         let c = PS2.lock().read();
         match KEYBOARD.lock().handle_scan_code(c as usize) {

@@ -41,19 +41,21 @@ impl GdtR {
         unsafe {
             asm!("sgdt [{}]", in(reg) &gdtr as *const _);
         }
+
         gdtr
     }
 
     pub fn get_desc(index: usize) -> Option<SegmentDescriptor> {
         let gdtr = GdtR::current();
-        let gdt_len = (gdtr.limit as usize + 1) / 8;
-        if index >= gdt_len {
+
+        if index >= (gdtr.limit as usize + 1) / 8 {
             return None
         }
         let mut desc: SegmentDescriptor = Default::default();
         unsafe {
             memcpy(&mut desc as *mut _ as *mut u8, (gdtr.base + size_of::<SegmentDescriptor>() * index) as *const u8, 8);
         }
+
         Some(desc)
     }
 }
@@ -77,13 +79,13 @@ pub fn init() {
     let descriptors: [SegmentDescriptor; GDTLEN] = [
         SegmentDescriptor::new(0x0, 0x0, 0x0, 0x0),       // 0x0 Not used
 
-        SegmentDescriptor::new(0x0, 0xFFFFF, 0x9A, 0x0D), // 0x8  Code 
-        SegmentDescriptor::new(0x0, 0xFFFFF, 0x92, 0x0D), // 0x10 Data
+        SegmentDescriptor::new(0x0, 0xFFFFF, 0x9A, 0xC), // 0x8  Code 
+        SegmentDescriptor::new(0x0, 0xFFFFF, 0x92, 0xC), // 0x10 Data
         SegmentDescriptor::new(0x0, 0x0, 0x96, 0x0D),     // 0x18 Stack
 
-        SegmentDescriptor::new(0x0, 0xFFFFF, 0xFE, 0x0D), // 0x20 User Code
-        SegmentDescriptor::new(0x0, 0xFFFFF, 0xF2, 0x0D), // 0x28 User Data
-        SegmentDescriptor::new(0x0, 0x0, 0xF6, 0x0D),     // 0x30 User Stack
+        SegmentDescriptor::new(0x0, 0xFFFFF, 0xFE, 0xC), // 0x20 User Code
+        SegmentDescriptor::new(0x0, 0xFFFFF, 0xF2, 0xC), // 0x28 User Data
+        SegmentDescriptor::new(0x0, 0x0, 0xF6, 0xC),     // 0x30 User Stack
 
         SegmentDescriptor::new(&tss as *const Tss as u32, 0x67, 0xE9, 0x00),   // 0x38 TSS
     ];
