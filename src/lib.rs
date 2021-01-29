@@ -19,6 +19,7 @@
 #![feature(ptr_internals)]
 #![feature(asm)]
 #![feature(associated_type_bounds)]
+#![feature(const_mut_refs)]
 #![no_std]
 
 use core::panic::PanicInfo;
@@ -36,6 +37,7 @@ pub mod shell;
 pub mod power_management;
 pub mod physical_memory_management;
 pub mod virtual_memory_management;
+pub mod dynamic_memory_management;
 pub mod external_symbols;
 
 use keyboard::{Command, KEYBOARD};
@@ -43,6 +45,7 @@ use ps2::PS2;
 use writer::WRITER;
 use virtual_memory_management::PAGE_DIRECTORY;
 use physical_memory_management::BITMAP;
+use dynamic_memory_management::{KERNEL_HEAP, Node};
 
 /// This function is called on panic.
 #[panic_handler]
@@ -72,7 +75,6 @@ fn init() {
 #[no_mangle]
 pub extern "C" fn kernel_main() {
     init();
-    virtual_memory_management::list_mappings();
     loop {
         let c = PS2.lock().read();
         match KEYBOARD.lock().handle_scan_code(c as usize) {
