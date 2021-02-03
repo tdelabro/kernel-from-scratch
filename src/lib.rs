@@ -45,7 +45,7 @@ use ps2::PS2;
 use writer::WRITER;
 use virtual_memory_management::PAGE_DIRECTORY;
 use physical_memory_management::BITMAP;
-use dynamic_memory_management::{KERNEL_HEAP, Node};
+use dynamic_memory_management::{KERNEL_HEAP};
 
 /// This function is called on panic.
 #[panic_handler]
@@ -67,6 +67,22 @@ fn init() {
     PS2.lock().init();
 }
 
+
+fn testHeap() {
+    
+    println!("nothing allocated:\n{}", KERNEL_HEAP.lock());
+
+    { 
+        let x = KERNEL_HEAP.lock().kalloc::<u8>(false);
+        println!("x allocated:\n{}", KERNEL_HEAP.lock());
+        let y = KERNEL_HEAP.lock().kalloc::<u8>(true);
+        println!("y allocated:\n{}", KERNEL_HEAP.lock());
+    }
+    println!("x deallocated:\n{}", KERNEL_HEAP.lock());
+    loop{};
+
+}
+
 /// The kernel entry point.
 ///
 /// This is the function called by grub after reading the multiboot header.
@@ -75,6 +91,8 @@ fn init() {
 #[no_mangle]
 pub extern "C" fn kernel_main() {
     init();
+    debug::print_kernel_sections_addresses();
+    testHeap();
     loop {
         let c = PS2.lock().read();
         match KEYBOARD.lock().handle_scan_code(c as usize) {

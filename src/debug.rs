@@ -93,13 +93,13 @@ use crate::external_symbols::*;
 /// 
 /// Begining and enf oth the kernel sections and stack
 pub fn print_kernel_sections_addresses() {
-    println!("kernel: start {:#x} end {:#x}", get_ext_symb_add(kernel_start), get_ext_symb_add(kernel_end));
-    println!("text: start {:#x} end {:#x}", get_ext_symb_add(section_text_start), get_ext_symb_add(section_text_end));
-    println!("rodata: start {:#x} end {:#x}", get_ext_symb_add(section_rodata_start), get_ext_symb_add(section_rodata_end));
-    println!("data: start {:#x} end {:#x}", get_ext_symb_add(section_data_start), get_ext_symb_add(section_data_end));
-    println!("bss: start {:#x} end {:#x}", get_ext_symb_add(section_bss_start), get_ext_symb_add(section_bss_end));
-    println!("common bss sep: {:#x}", get_ext_symb_add(common_bss_sep));
-    println!("stack: low {:#x} high {:#x}", get_ext_symb_add(stack_low),  get_ext_symb_add(stack_high));
+    println!("kernel: start {:#x} end {:#x}", get_kernel_start(), get_kernel_end());
+    println!("text: start {:#x} end {:#x}", get_section_text_start(), get_section_text_end());
+    println!("rodata: start {:#x} end {:#x}", get_section_rodata_start(), get_section_rodata_end());
+    println!("data: start {:#x} end {:#x}", get_section_data_start(), get_section_data_end());
+    println!("bss: start {:#x} end {:#x}", get_section_bss_start(), get_section_bss_end());
+    println!("common bss sep: {:#x}", get_common_bss_sep());
+    println!("stack: low {:#x} high {:#x}", get_stack_low(),  get_stack_high());
 }
 
 pub fn dump_bitmap() {

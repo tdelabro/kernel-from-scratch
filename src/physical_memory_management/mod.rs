@@ -1,6 +1,6 @@
 const N_PAGES: usize = 1024 * 1024;
 const BITMAP_LEN: usize = N_PAGES / 32;
-const PAGE_SIZE_4K: usize = 4096;
+pub const PAGE_SIZE_4K: usize = 4096;
 
 pub struct FrameManager {
     bitmap: [u32; BITMAP_LEN],

@@ -2,7 +2,7 @@ mod page_structs;
 
 use self::page_structs::{PageDirectory, PageTable};
 use core::ptr::Unique;
-use crate::external_symbols::{kernel_start, kernel_end, get_ext_symb_add};
+use crate::external_symbols::{get_kernel_start, get_kernel_end};
 use crate::physical_memory_management::BITMAP;
 
 const PAGE_DIR_ADDRESS: usize = 0x21000;
@@ -30,8 +30,8 @@ pub fn init() {
     PAGE_DIRECTORY.lock().map_pages(0xb8000, 0xb8000);
 
     // Kernel mapping
-    let kernel_first_page = get_ext_symb_add(kernel_start) & !0xFFF;
-    let kernel_last_page = get_ext_symb_add(kernel_end) & !0xFFF;
+    let kernel_first_page = get_kernel_start() & !0xFFF;
+    let kernel_last_page = get_kernel_end() & !0xFFF;
     let mut i = kernel_first_page;
     while i <= kernel_last_page {
         BITMAP.lock().kalloc_frame_by_address(i);
