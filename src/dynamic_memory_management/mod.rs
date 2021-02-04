@@ -4,17 +4,18 @@ use crate::physical_memory_management::{BITMAP, PAGE_SIZE_4K};
 use crate::virtual_memory_management::PAGE_DIRECTORY;
 
 use core::ptr::Unique;
-pub struct Box<T>(Unique<T>);
+use core::fmt;
+pub struct Box<T: ?Sized>(Unique<T>);
 
 use core::ops::{Drop, Deref, DerefMut};
 
-impl<T> Drop for Box<T> {
+impl<T: ?Sized> Drop for Box<T> {
     fn drop(&mut self) {
         unsafe { KERNEL_HEAP.lock().kfree(self) };
     }
 }
 
-impl<T> Deref for Box<T> {
+impl<T: ?Sized> Deref for Box<T> {
     type Target = T;
 
     fn deref(&self) -> &Self::Target {
@@ -22,9 +23,29 @@ impl<T> Deref for Box<T> {
     }
 }
 
-impl<T> DerefMut for Box<T> {
+impl<T: ?Sized> DerefMut for Box<T> {
     fn deref_mut(&mut self) -> &mut T {
         unsafe { self.0.as_mut() }
+    }
+}
+
+impl<T: ?Sized> fmt::Pointer for Box<T> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        fmt::Pointer::fmt(&self.deref(), f)
+    }
+}
+
+impl<T: fmt::Display + ?Sized> fmt::Display for Box<T> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        fmt::Display::fmt(self.deref(), f)
+    }
+}
+
+impl<T> Box<T> {
+    pub fn new(value: T) -> Box<T> {
+        let mut b = Box(KERNEL_HEAP.lock().kalloc::<T>());
+        *b = value;
+        b
     }
 }
 
@@ -85,8 +106,8 @@ impl KernelHeap {
         None
     }
 
-    pub fn kalloc<T>(&mut self, debug: bool) -> Box<T> {
-        let required_space = core::cmp::max(mem::size_of::<T>(), mem::size_of::<Chunk>());
+    fn kalloc<T: Sized>(&mut self) -> Unique<T> {
+        let required_space = mem::size_of::<T>() + mem::size_of::<Chunk>();
         let fit_chunk = self.find_block(required_space).unwrap_or_else(|| self.morecore(required_space));
         let new_chunk = (fit_chunk as usize + required_space) as *mut Chunk;
 
@@ -101,7 +122,7 @@ impl KernelHeap {
             }
             self.free_list = Some(new_chunk);
 
-            Box(Unique::new((fit_chunk as *mut usize).offset(3) as *mut T).unwrap())
+            Unique::new_unchecked((fit_chunk as usize + 3 * mem::size_of::<usize>()) as *mut T)
         }
     }
 
@@ -143,7 +164,7 @@ impl KernelHeap {
         old_brk
     }
 
-    pub unsafe fn kfree<T>(&mut self, address: &mut Box<T>) {
+    unsafe fn kfree<T: ?Sized>(&mut self, address: &mut Box<T>) {
         self.kfree_in(address.0.as_ptr() as *mut T as *mut u8);
     }
 
@@ -217,10 +238,6 @@ impl KernelHeap {
         (*(*head).next).prev = head;
     }
 }
-
-
-
-use core::fmt;
 
 impl fmt::Display for KernelHeap {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {

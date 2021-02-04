@@ -45,7 +45,7 @@ use ps2::PS2;
 use writer::WRITER;
 use virtual_memory_management::PAGE_DIRECTORY;
 use physical_memory_management::BITMAP;
-use dynamic_memory_management::{KERNEL_HEAP};
+use dynamic_memory_management::{KERNEL_HEAP, Box};
 
 /// This function is called on panic.
 #[panic_handler]
@@ -73,10 +73,9 @@ fn testHeap() {
     println!("nothing allocated:\n{}", KERNEL_HEAP.lock());
 
     { 
-        let x = KERNEL_HEAP.lock().kalloc::<u8>(false);
-        println!("x allocated:\n{}", KERNEL_HEAP.lock());
-        let y = KERNEL_HEAP.lock().kalloc::<u8>(true);
-        println!("y allocated:\n{}", KERNEL_HEAP.lock());
+        let x = Box::new("hi");
+        let y = x;
+        println!("{}", y);
     }
     println!("x deallocated:\n{}", KERNEL_HEAP.lock());
     loop{};
