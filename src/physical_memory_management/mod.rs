@@ -7,6 +7,12 @@ pub struct FrameManager {
     skip: usize,
 }
 
+pub enum PhysicalMemoryError {
+    NoFrameAvailable,
+    FrameAlreadyInUse,
+    FrameNotInUse,
+}
+
 #[derive(Copy, Clone)]
 pub struct PageFrame(usize);
 
@@ -30,49 +36,59 @@ impl PageFrame {
 }
 
 impl FrameManager {
-    fn next_available(&self) -> PageFrame {
-        let i = self.bitmap.iter()
+    fn next_available(&self) -> Result<PageFrame, PhysicalMemoryError> {
+        let idx = self.bitmap.iter()
             .skip(self.skip)
-            .position(|&x| x != !0)
-            .unwrap();
-        let mut j: usize = 0;
+            .position(|&x| x != !0);
 
-        while !self.bitmap[i] & (0x80000000 >> j) == 0 {
-            j += 1;
+        idx.map_or(Err(PhysicalMemoryError::NoFrameAvailable), |i| {
+            let mut j: usize = 0;
+            while !self.bitmap[i] & (0x80000000 >> j) == 0 {
+                j += 1;
+            }
+            Ok(PageFrame((i * 32 + j) * PAGE_SIZE_4K))
+        })
+    }
+
+    fn mark_as_used(&mut self, page: PageFrame) -> Result<(), PhysicalMemoryError> {
+        let i = page.index();
+        let o = page.offset();
+
+        match self.bitmap[i] & (0x80000000 >> o) == 0 {
+            false => Err(PhysicalMemoryError::FrameAlreadyInUse),
+            true => {
+                self.bitmap[i] |= 0x80000000 >> o;
+                self.skip = i;
+                Ok(())
+            }
         }
-        PageFrame((i * 32 + j) * PAGE_SIZE_4K)
     }
 
-    fn mark_as_used(&mut self, page: PageFrame) {
+    fn mark_as_available(&mut self, page: PageFrame) -> Result<(), PhysicalMemoryError> {
         let i = page.index();
         let o = page.offset();
 
-        assert!(self.bitmap[i] & (0x80000000 >> o) == 0);
-
-        self.bitmap[i] |= 0x80000000 >> o;
-        self.skip = i;
-    }
-    fn mark_as_available(&mut self, page: PageFrame) {
-        let i = page.index();
-        let o = page.offset();
-
-        assert!(self.bitmap[i] & (0x80000000 >> o) != 0);
-
-        self.bitmap[i] &= !(0x80000000 >> o);
-        self.skip = i;
+        match self.bitmap[i] & (0x80000000 >> o) != 0 {
+            false => Err(PhysicalMemoryError::FrameNotInUse),
+            true => {
+                self.bitmap[i] &= !(0x80000000 >> o);
+                self.skip = i;
+                Ok(())
+            }
+        }
     }
 
-    pub fn kalloc_frame(&mut self) -> usize {
-        let p = self.next_available();
-        self.mark_as_used(p);
-        p.address()
+    pub fn kalloc_frame(&mut self) -> Result<usize, PhysicalMemoryError> {
+        let p = self.next_available()?;
+        self.mark_as_used(p)?;
+        Ok(p.address())
     }
 
-    pub fn kalloc_frame_by_address(&mut self, address: usize) {
-        self.mark_as_used(PageFrame::new(address));
+    pub fn kalloc_frame_by_address(&mut self, address: usize) -> Result<(), PhysicalMemoryError> {
+        self.mark_as_used(PageFrame::new(address))
     }
 
-    pub fn free_frame(&mut self, address: usize) {
+    pub fn free_frame(&mut self, address: usize) -> Result<(), PhysicalMemoryError> {
         self.mark_as_available(PageFrame::new(address))
     }
 

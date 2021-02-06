@@ -20,6 +20,7 @@
 #![feature(asm)]
 #![feature(associated_type_bounds)]
 #![feature(const_mut_refs)]
+#![feature(allocator_api)]
 #![no_std]
 
 use core::panic::PanicInfo;
@@ -73,9 +74,14 @@ fn testHeap() {
     println!("nothing allocated:\n{}", KERNEL_HEAP.lock());
 
     { 
-        let x = Box::new("hi");
+        let x = Box::new("hello");
+        println!("x deallocated:\n{}", KERNEL_HEAP.lock());
+        println!("{}", x);
+        let z = Box::new_in(4, &KERNEL_HEAP);
+        println!("x deallocated:\n{}", KERNEL_HEAP.lock());
+        println!("{}", z);
         let y = x;
-        println!("{}", y);
+        println!("x deallocated:\n{}", KERNEL_HEAP.lock());
     }
     println!("x deallocated:\n{}", KERNEL_HEAP.lock());
     loop{};

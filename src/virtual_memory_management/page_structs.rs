@@ -1,6 +1,12 @@
 use core::ptr::Unique;
 use core::fmt;
 
+use crate::physical_memory_management::PhysicalMemoryError;
+
+pub enum VirtualMemoryError {
+    PhysicalMemoryError(PhysicalMemoryError),
+}
+
 pub struct PageTableEntry(usize);
 
 impl PageTableEntry {
@@ -44,6 +50,10 @@ impl PageTable {
         for i in 0..self.ref_table().len() {
             self.mut_table()[i] = PageTableEntry::new(0, 0)
         }
+    }
+
+    fn set_entry(&mut self, index: usize, address: usize, tags: usize) {
+        self.mut_table()[index] = PageTableEntry::new(address, tags);
     }
 
 }
@@ -110,15 +120,18 @@ impl PageDirectory {
         }
     }
 
-    pub fn map_pages(&mut self, physical_page_address: usize, virtual_page_address: usize) {
-        if self.enabled() {
-            self.map_pages_e(physical_page_address, virtual_page_address);
-        } else {
-            self.map_pages_d(physical_page_address, virtual_page_address);
+    fn get_table_linear_add(&self, offset: usize) -> usize {
+        match self.enabled() {
+            true => 0xFFC00000usize + 4 * offset,
+            false => self.ref_dir()[offset].page_table_address(),
         }
     }
 
-    fn map_pages_d(&mut self, physical_page_address: usize, virtual_page_address: usize) {
+    pub fn set_entry(&mut self, index: usize, address: usize, tags: usize) {
+        self.mut_dir()[index] = PageDirectoryEntry::new(address, tags);
+    }
+
+    pub fn map_pages(&mut self, physical_page_address: usize, virtual_page_address: usize) -> Result<(), VirtualMemoryError> {
         assert_eq!(0, physical_page_address & 0xFFF, "physical address is not aligned: {:#10x}", physical_page_address);
         assert_eq!(0, virtual_page_address & 0xFFF, "physical address is not aligned: {:#10x}", virtual_page_address);
 
@@ -129,41 +142,15 @@ impl PageDirectory {
         let page_table_add: usize;
         
         if !self.ref_dir()[d_offset].is_present() {
-            page_table_add = BITMAP.lock().kalloc_frame();
-            page_table = unsafe { PageTable(Unique::new_unchecked(page_table_add as *mut _)) };
-            page_table.clear();
-            self.mut_dir()[d_offset] = PageDirectoryEntry::new(page_table_add, 0x1);
-        } else {
-            page_table_add = self.ref_dir()[d_offset].page_table_address();
-            page_table = unsafe { PageTable(Unique::new_unchecked(page_table_add as *mut _)) };
-        }
-        page_table.mut_table()[t_offset] = PageTableEntry::new(physical_page_address, 0x1);
-    }
-
-    fn map_pages_e(&mut self, physical_page_address: usize, virtual_page_address: usize) {
-        assert_eq!(0, physical_page_address & 0xFFF, "physical address is not aligned: {:#10x}", physical_page_address);
-        assert_eq!(0, virtual_page_address & 0xFFF, "physical address is not aligned: {:#10x}", virtual_page_address);
-
-        let d_offset = virtual_page_address >> 22;
-        let t_offset = (virtual_page_address & 0x3FF000) >> 12;
-
-        let mut page_table: PageTable;
-        let page_table_add: usize;
-
-        if !self.ref_dir()[d_offset].is_present() {
-            page_table_add = BITMAP.lock().kalloc_frame();
-            self.mut_dir()[d_offset] = PageDirectoryEntry::new(page_table_add, 0x1);
-            page_table = unsafe { PageTable(Unique::new_unchecked((0xFFC00000usize + 4 * d_offset) as *mut _)) };
+            page_table_add = BITMAP.lock().kalloc_frame().map_err(|e| VirtualMemoryError::PhysicalMemoryError(e))?;
+            self.set_entry(d_offset, page_table_add, 0x1);
+            page_table = unsafe { PageTable(Unique::new_unchecked(self.get_table_linear_add(d_offset) as *mut _)) };
             page_table.clear();
         } else {
-            page_table = unsafe { PageTable(Unique::new_unchecked((0xFFC00000usize + 4 * d_offset) as *mut _)) };
+            page_table = unsafe { PageTable(Unique::new_unchecked(self.get_table_linear_add(d_offset) as *mut _)) };
         }
-
-        page_table.mut_table()[t_offset] = PageTableEntry::new(physical_page_address, 0x1);
-    }
-
-    pub fn set_entry(&mut self, index: usize, address: usize, tags: usize) {
-        self.mut_dir()[index] = PageDirectoryEntry::new(address, tags);
+        page_table.set_entry(t_offset, physical_page_address, 0x1);
+        Ok(())
     }
 
     pub fn unmap_pages(&mut self, virtual_page_address: usize) {
@@ -177,39 +164,12 @@ impl PageDirectory {
         let mut page_table = unsafe { PageTable(Unique::new_unchecked((0xFFC00000usize + 4 * d_offset) as *mut _)) };
         assert!(page_table.ref_table()[t_offset].is_present(), "page entry not present at index {} for virtual address {}",
             t_offset, virtual_page_address);
-        page_table.mut_table()[t_offset] = PageTableEntry::new(0x0, 0x0);
+        page_table.set_entry(t_offset, 0x0, 0x0);
         self.scan_table_for_release(d_offset);
     }
 
-    pub fn get_available_page_address_in_range(&self, min: usize, max: usize) -> Option<usize> {
-        for i in min >> 22 .. self.ref_dir().len() - 1 {
-            let table = unsafe { PageTable(Unique::new_unchecked((0xFFC00000usize + 4 * i) as *mut _)) };
-            for j in 0..table.ref_table().len() {
-                let page_add = i << 22 | j << 12;
-                if page_add >= max {
-                    return None
-                }
-                if !table.ref_table()[j].is_present() {
-                    return Some(page_add)
-                }
-            }
-        }
-        None
-    }
-
-    pub fn list_mappings(&self) {
-        assert!(self.enabled());
-        for i in 0..self.ref_dir().len() - 1 {
-            if self.ref_dir()[i].is_present() {
-                let table = unsafe { PageTable(Unique::new_unchecked((0xFFC00000usize + 4 * i) as *mut _)) };
-                for (j, entry) in table.ref_table().iter().enumerate().filter(|(_, e)| e.is_present()) {
-                    println!("v: {:#010x} p: {:#010x}", i << 22 | j << 12, entry.page_frame_address());
-                }
-            }
-        }
-    }
-
     fn scan_table_for_release(&mut self, d_offset: usize) {
+        assert!(self.enabled());
         let page_table = unsafe { PageTable(Unique::new_unchecked((0xFFC00000usize + 4 * d_offset) as *mut _)) };
         for entry in page_table.ref_table().iter() {
             if entry.is_present() {
