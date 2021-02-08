@@ -93,13 +93,13 @@ use crate::external_symbols::*;
 /// 
 /// Begining and enf oth the kernel sections and stack
 pub fn print_kernel_sections_addresses() {
-    println!("kernel: start {:#x} end {:#x}", get_kernel_start(), get_kernel_end());
-    println!("text: start {:#x} end {:#x}", get_section_text_start(), get_section_text_end());
-    println!("rodata: start {:#x} end {:#x}", get_section_rodata_start(), get_section_rodata_end());
-    println!("data: start {:#x} end {:#x}", get_section_data_start(), get_section_data_end());
-    println!("bss: start {:#x} end {:#x}", get_section_bss_start(), get_section_bss_end());
-    println!("common bss sep: {:#x}", get_common_bss_sep());
-    println!("stack: low {:#x} high {:#x}", get_stack_low(),  get_stack_high());
+    println!("kernel: start {:p} end {:p}", get_kernel_start(), get_kernel_end());
+    println!("text: start {:p} end {:p}", get_section_text_start(), get_section_text_end());
+    println!("rodata: start {:p} end {:p}", get_section_rodata_start(), get_section_rodata_end());
+    println!("data: start {:p} end {:p}", get_section_data_start(), get_section_data_end());
+    println!("bss: start {:p} end {:p}", get_section_bss_start(), get_section_bss_end());
+    println!("common bss sep: {:p}", get_common_bss_sep());
+    println!("stack: low {:p} high {:p}", get_stack_low(),  get_stack_high());
 }
 
 pub fn dump_bitmap() {

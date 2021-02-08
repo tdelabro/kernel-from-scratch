@@ -1,5 +1,5 @@
 use core::mem;
-use crate::external_symbols::{get_kernel_end};
+use crate::external_symbols::{get_first_page_after_kernel};
 use crate::physical_memory_management::{BITMAP, PAGE_SIZE_4K};
 use crate::virtual_memory_management::PAGE_DIRECTORY;
 
@@ -8,16 +8,14 @@ use core::fmt;
 use core::alloc::{GlobalAlloc, Layout, Allocator, AllocError};
 use super::{Locked};
 
-/*
 unsafe impl GlobalAlloc for Locked<KernelHeap> {
     unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
         self.lock().kalloc(layout).unwrap().as_ptr() as *mut u8
     }
     unsafe fn dealloc(&self, ptr: *mut u8, _layout: Layout) {
-        self.lock().free(ptr)
+        self.lock().free(NonNull::new_unchecked(ptr))
     }
 }
-*/
 
 unsafe impl Allocator for Locked<KernelHeap> {
     fn allocate(&self, layout: Layout) -> Result<NonNull<[u8]>, AllocError> {
@@ -48,18 +46,26 @@ impl fmt::Display for Chunk {
 unsafe impl Send for Chunk {}
 
 pub struct KernelHeap {
-    brk: Option<usize>,
+    brk: *const usize,
     pub free_list: Option<*mut Chunk>,
 }
 
 unsafe impl Send for KernelHeap {}
 
 impl KernelHeap {
-    pub const fn new() -> KernelHeap {
+    pub const fn new(start_add: *const usize) -> KernelHeap {
         KernelHeap { 
-            brk: None,
+            brk: start_add,
             free_list: None,
         }
+    }
+
+    fn get_brk(&self) -> usize {
+        self.brk as usize
+    }
+
+    fn set_brk(&mut self, new_brk: usize) {
+        self.brk = new_brk as *const usize;
     }
 
     fn find_block(&self, size: usize) -> Option<*mut Chunk> {
@@ -106,35 +112,27 @@ impl KernelHeap {
     fn morecore(&mut self, required_space: usize) -> Result<*mut Chunk, AllocError> {
         let new_chunk = self.sbrk(required_space as isize)? as *mut Chunk;
         unsafe { 
-            (*new_chunk).size = self.brk.unwrap() - new_chunk as usize; 
+            (*new_chunk).size = self.get_brk() - new_chunk as usize; 
             self.free_in((new_chunk as usize + 3 * mem::size_of::<usize>()) as *mut u8);
         }
         self.free_list.ok_or(AllocError)
     }
 
     fn sbrk(&mut self, increment: isize) -> Result<usize, AllocError> {
-        let old_brk = self.brk.unwrap_or({
-            let new_brk = match get_kernel_end() {
-                v if v & 0xFFF == 0 => v,
-                v => (v & !0xFFF) + PAGE_SIZE_4K,
-            };
-            self.brk = Some(new_brk);
-            new_brk
-        });
-
+        let old_brk = self.get_brk();
         let is_neg = increment < 0;
         let mut required_pages = (increment / PAGE_SIZE_4K as isize).abs() as usize
             + (increment % PAGE_SIZE_4K as isize != 0) as usize;
         while required_pages > 0 {
-            let current_brk = self.brk.unwrap();
+            let current_brk = self.get_brk();
             if is_neg {
                 let new_brk = current_brk - PAGE_SIZE_4K;
                 PAGE_DIRECTORY.lock().unmap_pages(new_brk);
-                self.brk = Some(new_brk);
+                self.set_brk(new_brk);
             } else {
                 let p_add = BITMAP.lock().kalloc_frame().map_err(|_| AllocError)?;
                 PAGE_DIRECTORY.lock().map_pages(p_add, current_brk).map_err(|_| AllocError)?;
-                self.brk = Some(current_brk + PAGE_SIZE_4K);
+                self.set_brk(current_brk + PAGE_SIZE_4K);
             }
             required_pages -= 1;
         }
@@ -239,4 +237,4 @@ impl fmt::Display for KernelHeap {
 
 use spin::Mutex;
 
-pub static KERNEL_HEAP: Locked<KernelHeap> = Locked::new(KernelHeap::new());
+pub static KERNEL_HEAP: Locked<KernelHeap> = Locked::new(KernelHeap::new(get_first_page_after_kernel()));

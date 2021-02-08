@@ -4,6 +4,7 @@ use super::allocator::{KernelHeap, KERNEL_HEAP};
 use core::fmt;
 use core::alloc::{Layout, Allocator};
 use core::ptr::NonNull;
+use core::alloc::GlobalAlloc;
 
 pub struct Box<T: ?Sized, A: Allocator = &'static Locked<KernelHeap>>(Unique<T>, A);
 
@@ -59,7 +60,7 @@ impl<T, A: Allocator> Box<T, A> {
 impl<T> Box<T> {
     pub fn new(value: T) -> Box<T, &'static Locked<KernelHeap>> {
         let p = unsafe {
-            Unique::new_unchecked(KERNEL_HEAP.allocate(Layout::new::<T>()).unwrap().as_ptr() as *mut T)
+            Unique::new_unchecked(KERNEL_HEAP.alloc(Layout::new::<T>()) as *mut T)
         };
         let mut b = Box(p, &KERNEL_HEAP);
         *b = value;

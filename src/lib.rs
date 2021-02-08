@@ -21,6 +21,8 @@
 #![feature(associated_type_bounds)]
 #![feature(const_mut_refs)]
 #![feature(allocator_api)]
+#![feature(const_fn_fn_ptr_basics)]
+#![feature(const_ptr_offset)]
 #![no_std]
 
 use core::panic::PanicInfo;
@@ -70,7 +72,7 @@ fn init() {
 
 
 fn testHeap() {
-    
+
     println!("nothing allocated:\n{}", KERNEL_HEAP.lock());
 
     { 

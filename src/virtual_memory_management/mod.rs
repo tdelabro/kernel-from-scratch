@@ -30,8 +30,8 @@ pub fn init() {
     PAGE_DIRECTORY.lock().map_pages(0xb8000, 0xb8000);
 
     // Kernel mapping
-    let kernel_first_page = get_kernel_start() & !0xFFF;
-    let kernel_last_page = get_kernel_end() & !0xFFF;
+    let kernel_first_page = get_kernel_start() as usize & !0xFFF;
+    let kernel_last_page = get_kernel_end() as usize & !0xFFF;
     let mut i = kernel_first_page;
     while i <= kernel_last_page {
         BITMAP.lock().kalloc_frame_by_address(i);
