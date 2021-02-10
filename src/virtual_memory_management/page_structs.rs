@@ -3,6 +3,7 @@ use core::fmt;
 
 use crate::physical_memory_management::PhysicalMemoryError;
 
+#[derive(Debug)]
 pub enum VirtualMemoryError {
     PhysicalMemoryError(PhysicalMemoryError),
 }
@@ -52,8 +53,8 @@ impl PageTable {
         }
     }
 
-    fn set_entry(&mut self, index: usize, address: usize, tags: usize) {
-        self.mut_table()[index] = PageTableEntry::new(address, tags);
+    fn set_entry(&mut self, index: usize, address: usize, flags: usize) {
+        self.mut_table()[index] = PageTableEntry::new(address, flags);
     }
 
 }
@@ -127,13 +128,14 @@ impl PageDirectory {
         }
     }
 
-    pub fn set_entry(&mut self, index: usize, address: usize, tags: usize) {
-        self.mut_dir()[index] = PageDirectoryEntry::new(address, tags);
+    pub fn set_entry(&mut self, index: usize, address: usize, flags: usize) {
+        self.mut_dir()[index] = PageDirectoryEntry::new(address, flags);
     }
 
-    pub fn map_pages(&mut self, physical_page_address: usize, virtual_page_address: usize) -> Result<(), VirtualMemoryError> {
-        assert_eq!(0, physical_page_address & 0xFFF, "physical address is not aligned: {:#10x}", physical_page_address);
-        assert_eq!(0, virtual_page_address & 0xFFF, "physical address is not aligned: {:#10x}", virtual_page_address);
+    pub fn map_pages(&mut self, physical_page_address: usize, virtual_page_address: usize, flags: usize)
+        -> Result<(), VirtualMemoryError> {
+        assert_eq!(0, physical_page_address & 0xFFF, "physical address is not 4k aligned: {:#10x}", physical_page_address);
+        assert_eq!(0, virtual_page_address & 0xFFF, "physical address is not 4k aligned: {:#10x}", virtual_page_address);
 
         let d_offset = virtual_page_address >> 22;
         let t_offset = (virtual_page_address & 0x3FF000) >> 12;
@@ -143,18 +145,18 @@ impl PageDirectory {
         
         if !self.ref_dir()[d_offset].is_present() {
             page_table_add = BITMAP.lock().kalloc_frame().map_err(|e| VirtualMemoryError::PhysicalMemoryError(e))?;
-            self.set_entry(d_offset, page_table_add, 0x1);
+            self.set_entry(d_offset, page_table_add, flags);
             page_table = unsafe { PageTable(Unique::new_unchecked(self.get_table_linear_add(d_offset) as *mut _)) };
             page_table.clear();
         } else {
             page_table = unsafe { PageTable(Unique::new_unchecked(self.get_table_linear_add(d_offset) as *mut _)) };
         }
-        page_table.set_entry(t_offset, physical_page_address, 0x1);
+        page_table.set_entry(t_offset, physical_page_address, flags);
         Ok(())
     }
 
     pub fn unmap_pages(&mut self, virtual_page_address: usize) {
-        assert_eq!(0, virtual_page_address & 0xFFF, "physical address is not aligned: {:#10x}", virtual_page_address);
+        assert_eq!(0, virtual_page_address & 0xFFF, "physical address is not 4k aligned: {:#10x}", virtual_page_address);
          
         let d_offset = virtual_page_address >> 22;
         let t_offset = (virtual_page_address & 0x3FF000) >> 12;
@@ -165,19 +167,6 @@ impl PageDirectory {
         assert!(page_table.ref_table()[t_offset].is_present(), "page entry not present at index {} for virtual address {}",
             t_offset, virtual_page_address);
         page_table.set_entry(t_offset, 0x0, 0x0);
-        self.scan_table_for_release(d_offset);
-    }
-
-    fn scan_table_for_release(&mut self, d_offset: usize) {
-        assert!(self.enabled());
-        let page_table = unsafe { PageTable(Unique::new_unchecked((0xFFC00000usize + 4 * d_offset) as *mut _)) };
-        for entry in page_table.ref_table().iter() {
-            if entry.is_present() {
-                return
-            }
-        }
-        BITMAP.lock().free_frame(self.ref_dir()[d_offset].page_table_address());
-        self.mut_dir()[d_offset] = PageDirectoryEntry::new(0x0, 0x0);
     }
 }
 

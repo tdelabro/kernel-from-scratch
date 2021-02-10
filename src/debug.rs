@@ -103,5 +103,5 @@ pub fn print_kernel_sections_addresses() {
 }
 
 pub fn dump_bitmap() {
-    println!("{}", crate::physical_memory_management::BITMAP.lock());
+    println!("{}", super::physical_memory_management::BITMAP.lock());
 }

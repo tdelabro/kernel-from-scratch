@@ -3,27 +3,25 @@ use crate::external_symbols::{get_first_page_after_kernel};
 use crate::physical_memory_management::{BITMAP, PAGE_SIZE_4K};
 use crate::virtual_memory_management::PAGE_DIRECTORY;
 
-use core::ptr::{NonNull, Unique};
+use core::ptr::{NonNull};
 use core::fmt;
 use core::alloc::{GlobalAlloc, Layout, Allocator, AllocError};
 use super::{Locked};
 
-unsafe impl GlobalAlloc for Locked<KernelHeap> {
+unsafe impl GlobalAlloc for Locked<Heap> {
     unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
-        self.lock().kalloc(layout).unwrap().as_ptr() as *mut u8
+        self.lock().malloc(layout).unwrap().as_ptr() as *mut u8
     }
-    unsafe fn dealloc(&self, ptr: *mut u8, _layout: Layout) {
+    unsafe fn dealloc(&self, ptr: *mut u8, _: Layout) {
         self.lock().free(NonNull::new_unchecked(ptr))
     }
 }
 
-unsafe impl Allocator for Locked<KernelHeap> {
+unsafe impl Allocator for Locked<Heap> {
     fn allocate(&self, layout: Layout) -> Result<NonNull<[u8]>, AllocError> {
-        unsafe {
-            self.lock().kalloc(layout)
-        }
+        self.lock().malloc(layout)
     }
-    unsafe fn deallocate(&self, ptr: NonNull<u8>, layout: Layout) {
+    unsafe fn deallocate(&self, ptr: NonNull<u8>, _: Layout) {
         self.lock().free(ptr)
     }
 }
@@ -45,18 +43,20 @@ impl fmt::Display for Chunk {
 
 unsafe impl Send for Chunk {}
 
-pub struct KernelHeap {
+pub struct Heap {
     brk: *const usize,
     pub free_list: Option<*mut Chunk>,
+    is_supervisor: bool,
 }
 
-unsafe impl Send for KernelHeap {}
+unsafe impl Send for Heap {}
 
-impl KernelHeap {
-    pub const fn new(start_add: *const usize) -> KernelHeap {
-        KernelHeap { 
+impl Heap {
+    pub const unsafe fn new(start_add: *const usize, is_supervisor: bool) -> Heap {
+        Heap { 
             brk: start_add,
             free_list: None,
+            is_supervisor: is_supervisor,
         }
     }
 
@@ -87,7 +87,7 @@ impl KernelHeap {
         None
     }
 
-    pub fn kalloc(&mut self, layout: Layout) -> Result<NonNull<[u8]>, AllocError>  {
+    fn malloc(&mut self, layout: Layout) -> Result<NonNull<[u8]>, AllocError>  {
         let required_space = layout.size() + mem::size_of::<Chunk>();
         let fit_chunk = self.find_block(required_space).ok_or(|| AllocError).or_else(|_| self.morecore(required_space))?;
         let new_chunk = (fit_chunk as usize + required_space) as *mut Chunk;
@@ -99,7 +99,7 @@ impl KernelHeap {
                 (*new_chunk).next = new_chunk;
                 (*new_chunk).prev = new_chunk;
             } else {
-                KernelHeap::replace_chunk(fit_chunk, new_chunk);
+                Heap::replace_chunk(fit_chunk, new_chunk);
             }
             self.free_list = Some(new_chunk);
 
@@ -131,7 +131,10 @@ impl KernelHeap {
                 self.set_brk(new_brk);
             } else {
                 let p_add = BITMAP.lock().kalloc_frame().map_err(|_| AllocError)?;
-                PAGE_DIRECTORY.lock().map_pages(p_add, current_brk).map_err(|_| AllocError)?;
+                PAGE_DIRECTORY
+                    .lock()
+                    .map_pages(p_add, current_brk, if self.is_supervisor { 0x3 } else { 0x7 })
+                    .map_err(|_| AllocError)?;
                 self.set_brk(current_brk + PAGE_SIZE_4K);
             }
             required_pages -= 1;
@@ -139,12 +142,12 @@ impl KernelHeap {
         Ok(old_brk)
     }
     
-    pub unsafe fn free(&mut self, address: NonNull<u8>) {
+    unsafe fn free(&mut self, address: NonNull<u8>) {
         self.free_in(address.as_ptr())
     }
 
     unsafe fn free_in(&mut self, address: *mut u8) {
-        let mut new_chunk = ((address as usize - 3 * mem::size_of::<usize>()) as *mut Chunk);
+        let mut new_chunk = (address as usize - 3 * mem::size_of::<usize>()) as *mut Chunk;
         self.free_list = Some(match self.free_list {
             None => {
                 (*new_chunk).next = new_chunk;
@@ -174,7 +177,7 @@ impl KernelHeap {
                     && !(head > (*head).next && (new_chunk > head || new_chunk < (*head).next)) {
                         head = (*head).next;
                     }
-                KernelHeap::insert_chunk(head, new_chunk)
+                Heap::insert_chunk(head, new_chunk)
             },
         }); 
     }
@@ -207,14 +210,9 @@ impl KernelHeap {
         }
         return new;
     }
-
-    unsafe fn remove_chunk(head: *mut Chunk, to_del: *mut Chunk) {
-        (*head).next = (*to_del).next;
-        (*(*head).next).prev = head;
-    }
 }
 
-impl fmt::Display for KernelHeap {
+impl fmt::Display for Heap {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         if let Some(start) = self.free_list {
             let mut head = start;
@@ -235,6 +233,6 @@ impl fmt::Display for KernelHeap {
     }
 }
 
-use spin::Mutex;
-
-pub static KERNEL_HEAP: Locked<KernelHeap> = Locked::new(KernelHeap::new(get_first_page_after_kernel()));
+pub static KERNEL_HEAP: Locked<Heap> = Locked::new(unsafe {
+    Heap::new(get_first_page_after_kernel(), true)
+});

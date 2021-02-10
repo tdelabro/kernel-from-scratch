@@ -1,12 +1,12 @@
 use core::ptr::Unique;
 use super::{Locked};
-use super::allocator::{KernelHeap, KERNEL_HEAP};
+use super::allocator::{Heap, KERNEL_HEAP};
 use core::fmt;
 use core::alloc::{Layout, Allocator};
 use core::ptr::NonNull;
 use core::alloc::GlobalAlloc;
 
-pub struct Box<T: ?Sized, A: Allocator = &'static Locked<KernelHeap>>(Unique<T>, A);
+pub struct Box<T: ?Sized, A: Allocator = &'static Locked<Heap>>(Unique<T>, A);
 
 use core::ops::{Drop, Deref, DerefMut};
 
@@ -58,7 +58,7 @@ impl<T, A: Allocator> Box<T, A> {
 }
 
 impl<T> Box<T> {
-    pub fn new(value: T) -> Box<T, &'static Locked<KernelHeap>> {
+    pub fn new(value: T) -> Box<T, &'static Locked<Heap>> {
         let p = unsafe {
             Unique::new_unchecked(KERNEL_HEAP.alloc(Layout::new::<T>()) as *mut T)
         };

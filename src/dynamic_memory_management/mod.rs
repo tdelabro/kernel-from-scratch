@@ -1,7 +1,7 @@
 mod allocator;
 mod my_box;
 
-pub use self::allocator::KERNEL_HEAP;
+pub use self::allocator::{Heap, KERNEL_HEAP};
 pub use self::my_box::Box;
 
 pub struct Locked<A> {

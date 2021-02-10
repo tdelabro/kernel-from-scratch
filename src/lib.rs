@@ -46,9 +46,9 @@ pub mod external_symbols;
 use keyboard::{Command, KEYBOARD};
 use ps2::PS2;
 use writer::WRITER;
-use virtual_memory_management::PAGE_DIRECTORY;
-use physical_memory_management::BITMAP;
-use dynamic_memory_management::{KERNEL_HEAP, Box};
+use dynamic_memory_management::{KERNEL_HEAP, Box, Heap, Locked};
+use core::alloc::Layout;
+use core::alloc::GlobalAlloc;
 
 /// This function is called on panic.
 #[panic_handler]
@@ -70,24 +70,23 @@ fn init() {
     PS2.lock().init();
 }
 
-
-fn testHeap() {
-
-    println!("nothing allocated:\n{}", KERNEL_HEAP.lock());
-
-    { 
-        let x = Box::new("hello");
-        println!("x deallocated:\n{}", KERNEL_HEAP.lock());
-        println!("{}", x);
-        let z = Box::new_in(4, &KERNEL_HEAP);
-        println!("x deallocated:\n{}", KERNEL_HEAP.lock());
-        println!("{}", z);
-        let y = x;
-        println!("x deallocated:\n{}", KERNEL_HEAP.lock());
+fn test_heap() {
+    let heap = unsafe { Locked::new(Heap::new(0x181000 as *const _, false)) };
+    let x = Box::new_in(5, &heap);
+    println!("{:p} {}", x, x);
+    let y = Box::new(12);
+    println!("{:p} {}", y, y);
+    unsafe {
+    println!("1\n{}", heap.lock());
+        let z = heap.alloc(Layout::new::<usize>());
+    println!("2\n{}", heap.lock());
+        *z = 4;
+        println!("{:p} {}", z, *z);
+        *z = 3;
+        println!("{:p} {}", z, *z);
+    heap.dealloc(z, Layout::new::<usize>());
     }
-    println!("x deallocated:\n{}", KERNEL_HEAP.lock());
-    loop{};
-
+    println!("3\n{}", heap.lock());
 }
 
 /// The kernel entry point.
@@ -99,7 +98,7 @@ fn testHeap() {
 pub extern "C" fn kernel_main() {
     init();
     debug::print_kernel_sections_addresses();
-    testHeap();
+    test_heap();
     loop {
         let c = PS2.lock().read();
         match KEYBOARD.lock().handle_scan_code(c as usize) {

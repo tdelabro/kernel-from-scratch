@@ -7,6 +7,7 @@ pub struct FrameManager {
     skip: usize,
 }
 
+#[derive(Debug)]
 pub enum PhysicalMemoryError {
     NoFrameAvailable,
     FrameAlreadyInUse,
