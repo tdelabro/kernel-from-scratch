@@ -6,7 +6,6 @@
 //! - A new line is added when the current is full
 //! - The cursor can be moved along the line to write at specific position
 //! - Characters can be removed from screen with backspace
-//! - 6 screens exist. Loop between them with ctrl + left/right arrow
 
 mod screen_writer;
 
@@ -15,7 +14,7 @@ use spin::Mutex;
 pub use self::screen_writer::BUFFER_WIDTH;
 use self::screen_writer::VGAScreen;
 
-/// The unique entry point to write characters on the VGA screen
+/// Unique enty point to write characters on the VGA screen
 pub static WRITER: Mutex<VGAScreen> = Mutex::new(VGAScreen::new());
 
 use core::fmt;

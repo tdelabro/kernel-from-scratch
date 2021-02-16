@@ -1,15 +1,20 @@
 //! Kernel From Scratch
 //!
-//! This crate contains a simple kernel.
+//! This crate contains tdelabro minimalist kernel, for the purpose of the school 42 kfs projects.
+//!
+//! Current step: kfs-3.
 //!
 //! # Features
-//!
 //! - Global Descriptor Table
 //! - VGA Screen
 //! - Keyboard input
 //! - Basic command line interpreter
 //! - Debug utilities
 //! - Power management
+//! - Physical memory management
+//! - Paging & virtual memory management
+//! - Unique Kernel heap
+//! - Multiple user heaps
 
 //#![warn(missing_docs)]
 //#![warn(missing_doc_code_examples)]
@@ -23,11 +28,13 @@
 #![feature(allocator_api)]
 #![feature(const_fn_fn_ptr_basics)]
 #![feature(const_ptr_offset)]
+#![feature(alloc_error_handler)]
 #![no_std]
 
-use core::panic::PanicInfo;
-
 extern crate spin;
+extern crate alloc;
+
+use core::panic::PanicInfo;
 
 #[macro_use]
 pub mod writer;
@@ -42,13 +49,11 @@ pub mod physical_memory_management;
 pub mod virtual_memory_management;
 pub mod dynamic_memory_management;
 pub mod external_symbols;
+pub mod heap_demo;
 
 use keyboard::{Command, KEYBOARD};
 use ps2::PS2;
 use writer::WRITER;
-use dynamic_memory_management::{KERNEL_HEAP, Box, Heap, Locked};
-use core::alloc::Layout;
-use core::alloc::GlobalAlloc;
 
 /// This function is called on panic.
 #[panic_handler]
@@ -59,34 +64,20 @@ fn panic(info: &PanicInfo) -> ! {
     loop {}
 }
 
+#[alloc_error_handler]
+fn alloc_error_handler(layout: alloc::alloc::Layout) -> ! {
+    panic!("allocation error: {:?}", layout)
+}
+
 fn init() {
     // Global Descriptor Table
     gdt::init();
 
     // Paging
-    virtual_memory_management::init();
+    virtual_memory_management::init(false);
 
     // Keyboard input
     PS2.lock().init();
-}
-
-fn test_heap() {
-    let heap = unsafe { Locked::new(Heap::new(0x181000 as *const _, false)) };
-    let x = Box::new_in(5, &heap);
-    println!("{:p} {}", x, x);
-    let y = Box::new(12);
-    println!("{:p} {}", y, y);
-    unsafe {
-    println!("1\n{}", heap.lock());
-        let z = heap.alloc(Layout::new::<usize>());
-    println!("2\n{}", heap.lock());
-        *z = 4;
-        println!("{:p} {}", z, *z);
-        *z = 3;
-        println!("{:p} {}", z, *z);
-    heap.dealloc(z, Layout::new::<usize>());
-    }
-    println!("3\n{}", heap.lock());
 }
 
 /// The kernel entry point.
@@ -98,7 +89,7 @@ fn test_heap() {
 pub extern "C" fn kernel_main() {
     init();
     debug::print_kernel_sections_addresses();
-    test_heap();
+    heap_demo::demo();
     loop {
         let c = PS2.lock().read();
         match KEYBOARD.lock().handle_scan_code(c as usize) {

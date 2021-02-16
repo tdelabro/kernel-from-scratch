@@ -1,4 +1,8 @@
-// Symbols defined in the linker script
+//! Symbols defined in the linker script
+//! 
+//! Provide information about kernel the memory layout.
+//! Used for kernel identity mapping and debug.
+
 extern "C" {
     pub fn kernel_start();
     pub fn kernel_end();

@@ -79,7 +79,7 @@ use core::fmt;
 
 impl fmt::Display for SegmentDescriptor {
         fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result { 
-            write!(f, "base: {:#010x}, limit: {:#07x}\npresent: {}, privilege: {}\ntype {}, dc: {}, rw: {}\naccessed: {}, granularity: {}, size: {}",
+            write!(f, "base: {:#010x}, limit: {:#07x}\npresent: {}, privilege: {}\ntype {}, dc: {}, rw: {}\naccessed: {}, granularity: {}, size: {}, long: {}, available {}",
                 self.base(), self.limit(), self.present(), self.privilege(),
                 match self.desc_type() {
                     false => "System",
@@ -96,6 +96,7 @@ impl fmt::Display for SegmentDescriptor {
                 match self.operand_size(){
                     false => "16bit",   
                     true => "32bit",   
-                })
+                },
+                self.long(), self.available())
         }
 }

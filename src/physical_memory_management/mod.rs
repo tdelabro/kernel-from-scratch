@@ -1,13 +1,26 @@
-const N_PAGES: usize = 1024 * 1024;
-const BITMAP_LEN: usize = N_PAGES / 32;
-pub const PAGE_SIZE_4K: usize = 4096;
+//! Physical page frames management
+//!
+//! Keep track of the availibility of each physical page frame.
+//! Optimize time complexity of finding an available one.
 
+/// 0x1000
+pub const PAGE_SIZE_4K: usize = 4096;
+/// 0x8000000
+pub const RAM_SIZE: usize = 0x8000000;
+const N_FRAMES: usize = RAM_SIZE / PAGE_SIZE_4K;
+const BITMAP_LEN: usize = N_FRAMES / 32;
+
+/// Bitmap representation of physical memrory
+///
+/// One bit for each page frame:
+/// - Set => in use
+/// - Clear => available
 pub struct FrameManager {
     bitmap: [u32; BITMAP_LEN],
     skip: usize,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Copy, Clone)]
 pub enum PhysicalMemoryError {
     NoFrameAvailable,
     FrameAlreadyInUse,
@@ -15,7 +28,7 @@ pub enum PhysicalMemoryError {
 }
 
 #[derive(Copy, Clone)]
-pub struct PageFrame(usize);
+struct PageFrame(usize);
 
 impl PageFrame {
     fn new(address: usize) -> PageFrame {
@@ -79,13 +92,13 @@ impl FrameManager {
         }
     }
 
-    pub fn kalloc_frame(&mut self) -> Result<usize, PhysicalMemoryError> {
+    pub fn alloc_frame(&mut self) -> Result<usize, PhysicalMemoryError> {
         let p = self.next_available()?;
         self.mark_as_used(p)?;
         Ok(p.address())
     }
 
-    pub fn kalloc_frame_by_address(&mut self, address: usize) -> Result<(), PhysicalMemoryError> {
+    pub fn alloc_frame_by_address(&mut self, address: usize) -> Result<(), PhysicalMemoryError> {
         self.mark_as_used(PageFrame::new(address))
     }
 
@@ -104,15 +117,11 @@ use core::fmt;
 
 impl fmt::Display for FrameManager {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        if let Err(e) =  write!(f, "Used frames:\n") {
-            return Err(e);
-        }
+        write!(f, "Used frames:\n")?;
         for (i, u) in self.bitmap.iter().enumerate() {
             for j in 0..32 {
                 if u & (0x80000000 >> j) != 0 {
-                    if let Err(e) =  write!(f, "{:#010x} ",  PAGE_SIZE_4K * (32 * i + j)) {
-                        return Err(e);
-                    }
+                    write!(f, "{:#010x} ",  PAGE_SIZE_4K * (32 * i + j))?;
                 }
             }
         }
@@ -122,6 +131,7 @@ impl fmt::Display for FrameManager {
 
 use spin::Mutex;
 
+/// Unique source of true for physical memory management
 pub static BITMAP: Mutex<FrameManager> = Mutex::new(FrameManager {
     bitmap: [0; BITMAP_LEN],
     skip: 0,
