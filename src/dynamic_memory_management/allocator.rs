@@ -40,8 +40,6 @@ impl fmt::Display for Chunk {
     }
 }
 
-unsafe impl Send for Chunk {}
-
 pub struct Heap {
     start: *const usize,
     brk: *const usize,

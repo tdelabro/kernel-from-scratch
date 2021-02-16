@@ -1,3 +1,7 @@
+//! Heap demo scenarii 
+//!
+//! Temporary file, will be used during the project correction at 42.
+
 use dynamic_memory_management::{KERNEL_HEAP, Heap, Locked};
 use core::alloc::{Layout, GlobalAlloc, Allocator};
 use core::ptr::{NonNull};
@@ -41,9 +45,8 @@ fn expand_heap_demo() {
 
 // Compiler crash no good
 fn local_heap_demo() {
-    //let my_allocator = unsafe { Locked::new(Heap::new(0xc00000 as *const usize, false)) };
-    //let a = Box::new_in(42usize, my_allocator.by_ref());
-    //let b = Box::new_in(24usize, my_allocator.by_ref());
+    let my_allocator = unsafe { Locked::new(Heap::new(0xc00000 as *const usize, false)) };
+    let a = Box::new_in(42usize, my_allocator);
 }
 
 fn allocator_method_demo() {
@@ -63,7 +66,6 @@ fn allocator_method_demo() {
 pub fn demo() {
     //box_demo();
     //expand_heap_demo();
-    //local_heap_demo();
-    allocator_method_demo();
+    //allocator_method_demo();
 }
 

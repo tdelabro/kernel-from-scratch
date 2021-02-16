@@ -23,15 +23,17 @@ fn enable(page_dir_address: usize) {
     }
 }
 
-/// Setup and enable paging
+/// Setup memory
 ///
-/// Identity mapping for:
+/// If arg is false, will tag specific area of memory as used in BITMAP, to avoid latter override.
+/// Else if arg is true it will also identity page those memory area, set up the recursive page directory trick on the last entry 
+/// of the page directory and enable paging.
+///
+/// Target memory areas:
 /// - Global Descriptor Table
 /// - Ps2 ports
 /// - VGA screen memory map
-/// - The whole kernel code
-///
-/// Recursive page directory trick on the last entry of the page directory
+/// - The whole kernel
 pub fn init(enable_paging: bool) {
     let kernel_first_page = get_kernel_start() as usize & !0xFFF;
     let kernel_last_page = get_kernel_end() as usize & !0xFFF;
