@@ -2,6 +2,9 @@
 //!
 //! Temporary file, will be used during the project correction at 42.
 
+#![allow(unused_imports)]
+#![allow(dead_code)]
+
 use dynamic_memory_management::{KERNEL_HEAP, Heap, Locked};
 use core::alloc::{Layout, GlobalAlloc, Allocator};
 use core::ptr::{NonNull};
@@ -47,6 +50,7 @@ fn expand_heap_demo() {
 fn local_heap_demo() {
     let my_allocator = unsafe { Locked::new(Heap::new(0xc00000 as *const usize, false)) };
     let a = Box::new_in(42usize, my_allocator);
+    println!("{}", a);
 }
 
 fn allocator_method_demo() {
@@ -68,4 +72,3 @@ pub fn demo() {
     //expand_heap_demo();
     //allocator_method_demo();
 }
-
