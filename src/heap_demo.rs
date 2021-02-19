@@ -65,10 +65,22 @@ fn allocator_method_demo() {
     unsafe { my_allocator.deallocate(x.cast::<u8>(), Layout::new::<usize>()) };
     print!("{}", my_allocator.lock());
     println!("-----");
+    //println!("{}", BITMAP.lock());
+}
+
+fn infinite_alloc_demo() {
+    let my_allocator = unsafe { Locked::new(Heap::new(0x7FFE000 as *const usize, false)) };
+    let mut c = 0;
+    while let Ok(x) = my_allocator.allocate(Layout::new::<[u32; 1024]>()) {
+        println!("{} {:p} {}", c, x, my_allocator.lock());
+        c += 1; 
+    }
+    println!("{}", BITMAP.lock());
 }
 
 pub fn demo() {
     //box_demo();
     //expand_heap_demo();
     //allocator_method_demo();
+    infinite_alloc_demo();
 }

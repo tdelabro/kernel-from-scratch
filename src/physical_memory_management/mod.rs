@@ -25,6 +25,7 @@ pub enum PhysicalMemoryError {
     NoFrameAvailable,
     FrameAlreadyInUse,
     FrameNotInUse,
+    AddressOutOfMemory,
 }
 
 #[derive(Copy, Clone)]
@@ -57,7 +58,7 @@ impl FrameManager {
 
         idx.map_or(Err(PhysicalMemoryError::NoFrameAvailable), |i| {
             let mut j: usize = 0;
-            while !self.bitmap[i] & (0x80000000 >> j) == 0 {
+            while !self.bitmap[self.skip + i] & (0x80000000 >> j) == 0 {
                 j += 1;
             }
             Ok(PageFrame((i * 32 + j) * PAGE_SIZE_4K))
@@ -67,6 +68,10 @@ impl FrameManager {
     fn mark_as_used(&mut self, page: PageFrame) -> Result<(), PhysicalMemoryError> {
         let i = page.index();
         let o = page.offset();
+
+        if i >= BITMAP_LEN {
+            return Err(PhysicalMemoryError::AddressOutOfMemory)
+        }
 
         match self.bitmap[i] & (0x80000000 >> o) == 0 {
             false => Err(PhysicalMemoryError::FrameAlreadyInUse),

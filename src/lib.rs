@@ -74,7 +74,7 @@ fn init() {
     gdt::init();
 
     // Paging
-    virtual_memory_management::init(false);
+    virtual_memory_management::init(true);
 
     // Keyboard input
     PS2.lock().init();
