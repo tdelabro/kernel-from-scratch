@@ -1,16 +1,20 @@
-use core::mem;
-use crate::external_symbols::{get_first_page_after_kernel};
+use crate::external_symbols::get_first_page_after_kernel;
 use crate::physical_memory_management::{BITMAP, PAGE_SIZE_4K};
 use crate::virtual_memory_management::PAGE_DIRECTORY;
+use core::mem;
 
-use core::ptr::{NonNull};
-use alloc::alloc::{GlobalAlloc, Layout, Allocator, AllocError};
-use super::{Locked};
+use super::Locked;
+use alloc::alloc::{AllocError, Allocator, GlobalAlloc, Layout};
+use core::ptr::NonNull;
 
 unsafe impl GlobalAlloc for Locked<Heap> {
     unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
-        self.allocate(layout).unwrap().cast::<u8>().as_ptr()
+        match self.allocate(layout) {
+            Ok(p) => p.cast::<u8>().as_ptr(),
+            Err(_) => 0x0 as *mut u8,
+        }
     }
+
     unsafe fn dealloc(&self, ptr: *mut u8, layout: Layout) {
         self.deallocate(NonNull::new(ptr).unwrap(), layout);
     }
@@ -35,8 +39,11 @@ pub struct Chunk {
 
 impl fmt::Display for Chunk {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "address: {:p} prev: {:p} next: {:p} size: {}",
-               self, self.prev, self.next, self.size)
+        write!(
+            f,
+            "address: {:p} prev: {:p} next: {:p} size: {}",
+            self, self.prev, self.next, self.size
+        )
     }
 }
 
@@ -51,7 +58,7 @@ unsafe impl Send for Heap {}
 
 impl Heap {
     pub const unsafe fn new(start_add: *const usize, is_supervisor: bool) -> Heap {
-        Heap { 
+        Heap {
             start: start_add,
             brk: start_add,
             free_list: None,
@@ -75,7 +82,7 @@ impl Heap {
                 // Do-while blackmagic
                 while {
                     if (*head).size >= size {
-                        return Some(head)
+                        return Some(head);
                     }
                     head = (*head).next;
 
@@ -87,9 +94,12 @@ impl Heap {
         None
     }
 
-    fn malloc(&mut self, layout: Layout) -> Result<NonNull<[u8]>, AllocError>  {
+    fn malloc(&mut self, layout: Layout) -> Result<NonNull<[u8]>, AllocError> {
         let required_space = layout.size() + mem::size_of::<Chunk>();
-        let fit_chunk = self.find_block(required_space).ok_or(|| AllocError).or_else(|_| self.morecore(required_space))?;
+        let fit_chunk = self
+            .find_block(required_space)
+            .ok_or(|| AllocError)
+            .or_else(|_| self.morecore(required_space))?;
         unsafe {
             if (*fit_chunk).size - required_space <= mem::size_of::<Chunk>() {
                 self.remove_chunk(fit_chunk);
@@ -99,16 +109,17 @@ impl Heap {
                 (*fit_chunk).size = required_space;
                 self.replace_chunk(fit_chunk, new_chunk);
             }
-            Ok(NonNull::new_unchecked(
-                    core::slice::from_raw_parts_mut((fit_chunk as usize + 3 * mem::size_of::<usize>()) as *mut u8,
-                    layout.size())))
+            Ok(NonNull::new_unchecked(core::slice::from_raw_parts_mut(
+                (fit_chunk as usize + 3 * mem::size_of::<usize>()) as *mut u8,
+                layout.size(),
+            )))
         }
     }
 
     fn morecore(&mut self, required_space: usize) -> Result<*mut Chunk, AllocError> {
         let new_chunk = self.sbrk(required_space as isize)? as *mut Chunk;
-        unsafe { 
-            (*new_chunk).size = self.get_brk() - new_chunk as usize; 
+        unsafe {
+            (*new_chunk).size = self.get_brk() - new_chunk as usize;
             self.free_in((new_chunk as usize + 3 * mem::size_of::<usize>()) as *mut u8);
         }
         self.free_list.ok_or(AllocError)
@@ -121,31 +132,39 @@ impl Heap {
             + (increment % PAGE_SIZE_4K as isize != 0) as usize;
         while required_pages > 0 {
             let current_brk = self.get_brk();
-            self.set_brk(
-                if is_neg {
-                    let new_brk = current_brk - PAGE_SIZE_4K;
+            self.set_brk(if is_neg {
+                let new_brk = current_brk - PAGE_SIZE_4K;
 
-                    if PAGE_DIRECTORY.lock().is_enabled() {
-                        PAGE_DIRECTORY.lock().unmap_pages(new_brk)
-                            .map_err(|_| AllocError)?;
-                    } else {
-                        BITMAP.lock().free_frame(new_brk).map_err(|_| AllocError)?;
-                    }
-
-                    new_brk
+                if PAGE_DIRECTORY.lock().is_enabled() {
+                    PAGE_DIRECTORY
+                        .lock()
+                        .unmap_pages(new_brk)
+                        .map_err(|_| AllocError)?;
                 } else {
-                    if PAGE_DIRECTORY.lock().is_enabled() {
-                        let p_add = BITMAP.lock().alloc_frame().map_err(|_| AllocError)?;
-                        PAGE_DIRECTORY
-                            .lock()
-                            .map_pages(p_add, current_brk, if self.is_supervisor { 0x3 } else { 0x7 })
-                            .map_err(|_| AllocError)?;
-                    } else {
-                        BITMAP.lock().alloc_frame_by_address(current_brk).map_err(|_| AllocError)?;
-                    }
+                    BITMAP.lock().free_frame(new_brk).map_err(|_| AllocError)?;
+                }
 
-                    current_brk + PAGE_SIZE_4K
-                });
+                new_brk
+            } else {
+                if PAGE_DIRECTORY.lock().is_enabled() {
+                    let p_add = BITMAP.lock().alloc_frame().map_err(|_| AllocError)?;
+                    PAGE_DIRECTORY
+                        .lock()
+                        .map_pages(
+                            p_add,
+                            current_brk,
+                            if self.is_supervisor { 0x3 } else { 0x7 },
+                        )
+                        .map_err(|_| AllocError)?;
+                } else {
+                    BITMAP
+                        .lock()
+                        .alloc_frame_by_address(current_brk)
+                        .map_err(|_| AllocError)?;
+                }
+
+                current_brk + PAGE_SIZE_4K
+            });
             required_pages -= 1;
         }
         Ok(old_brk)
@@ -173,7 +192,7 @@ impl Heap {
     }
 
     unsafe fn remove_chunk(&mut self, head: *mut Chunk) {
-        if (*head).next == head{
+        if (*head).next == head {
             self.free_list = None;
         } else {
             (*(*head).next).prev = (*head).prev;
@@ -200,19 +219,19 @@ impl Heap {
                 (*new).next = new;
                 (*new).prev = new;
                 new
-            },
+            }
             Some(start) if (*start).next == start => {
                 // Collide with next
                 if (start as usize + (*start).size) as *mut Chunk == new {
                     (*start).size += (*new).size;
                     start
-                        // Collide with prev
+                    // Collide with prev
                 } else if (new as usize + (*new).size) as *mut Chunk == start {
                     (*new).size += (*start).size;
                     (*new).next = new;
                     (*new).prev = new;
                     new
-                        // Just append, order doesn't matter
+                    // Just append, order doesn't matter
                 } else {
                     (*start).next = new;
                     (*start).prev = new;
@@ -220,12 +239,14 @@ impl Heap {
                     (*new).prev = start;
                     new
                 }
-            },
+            }
             Some(start) => {
                 let mut head = start;
                 let mut ret = new;
 
-                while !(head < new && new < (*head).next) && !(head > (*head).next && (new > head || new < (*head).next)) {
+                while !(head < new && new < (*head).next)
+                    && !(head > (*head).next && (new > head || new < (*head).next))
+                {
                     head = (*head).next;
                 }
 
@@ -249,8 +270,8 @@ impl Heap {
                 }
 
                 ret
-            },
-        }); 
+            }
+        });
     }
 
     pub unsafe fn size(address: NonNull<u8>) -> usize {
@@ -262,8 +283,16 @@ use core::fmt;
 
 impl fmt::Display for Heap {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "Heap end at: {:p} and accessible by {}.\n", self.brk,
-               if self.is_supervisor { "supervisor only" } else {"everybody"})?;
+        write!(
+            f,
+            "Heap end at: {:p} and accessible by {}.\n",
+            self.brk,
+            if self.is_supervisor {
+                "supervisor only"
+            } else {
+                "everybody"
+            }
+        )?;
         if let Some(start) = self.free_list {
             let mut head = start;
             write!(f, "Free chunks list:\n")?;
@@ -295,6 +324,5 @@ impl Drop for Heap {
 }
 
 #[global_allocator]
-pub static KERNEL_HEAP: Locked<Heap> = Locked::new(unsafe {
-    Heap::new(get_first_page_after_kernel(), true)
-});
+pub static KERNEL_HEAP: Locked<Heap> =
+    Locked::new(unsafe { Heap::new(get_first_page_after_kernel(), true) });

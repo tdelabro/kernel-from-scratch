@@ -22,7 +22,11 @@ BOOT_DIR = $(addprefix $(ISO_DIR), boot/)
 GRUB_DIR = $(addprefix $(BOOT_DIR), grub/)
 
 CC = $(addprefix $(OPT_DIR), bin/i686-elf-gcc)
-GRUB_MKRESCUE = $(addprefix $(OPT_DIR), bin/grub-mkrescue)
+ifeq ($(shell uname), Darwin)
+	GRUB_MKRESCUE = $(addprefix $(OPT_DIR), bin/grub-mkrescue)
+else
+	GRUB_MKRESCUE = grub-mkrescue
+endif
 
 
 OBJ = $(addprefix $(OBJ_DIR), $(ASM:.asm=.o))
@@ -37,9 +41,10 @@ default: $(ISO)
 setup: $(OPT_DIR)
 	rustup toolchain install nightly
 	rustup component add rust-src
+	cd cross-compiled-toolchain && sh install-toolchain.sh
 
 $(OPT_DIR):
-	cd cross-compiled-toolchain && sh install-toolchain.sh
+	#mkdir $(OPT_DIR)
 
 $(BUILD_DIR):
 	mkdir -p build
