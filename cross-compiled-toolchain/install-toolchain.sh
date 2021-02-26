@@ -16,20 +16,21 @@ mkdir -p "$PREFIX"
 mkdir -p "$SRC"
 
 # binutils
+BINUTILS="binutils-2.35"
 cd $SRC
-if [ ! -d "binutils-2.35" ]; then
+if [ ! -d $BINUTILS ]; then
 	echo ""
 	echo "Installing \`binutils\`"
 	echo ""
-	curl http://ftp.gnu.org/gnu/binutils/binutils-2.35.tar.gz > binutils-2.35.tar.gz
-	tar xfz binutils-2.35.tar.gz
-	rm binutils-2.35.tar.gz
+	curl http://ftp.gnu.org/gnu/binutils/$BINUTILS.tar.gz > $BINUTILS.tar.gz
+	tar xfz $BINUTILS.tar.gz
+	rm $BINUTILS.tar.gz
 fi
 
 if [ ! -f "$PREFIX/bin/i686-elf-ld" ]; then
 	mkdir -p build-binutils
 	cd build-binutils
-	../binutils-2.35/configure --target=$TARGET --prefix="$PREFIX" --with-sysroot --disable-nls --disable-werror
+	../$BINUTILS/configure --target=$TARGET --prefix="$PREFIX" --with-sysroot --disable-nls --disable-werror
 	make
 	make install
 fi
@@ -38,21 +39,22 @@ echo "binutils OK"
 
 # gcc
 cd $SRC
-if [ ! -d "gcc-10.2.0" ]; then
+GCC="gcc-10.2.0"
+if [ ! -d $GCC ]; then
 	echo ""
 	echo "Installing \`gcc\`"
 	echo ""
-	curl -L http://ftpmirror.gnu.org/gcc/gcc-10.2.0/gcc-10.2.0.tar.gz > gcc-10.2.0.tar.gz
-	tar xvf gcc-10.2.0.tar.gz
-	rm gcc-10.2.0.tar.gz
+	curl -L http://ftpmirror.gnu.org/gcc/$GCC/$GCC.tar.gz > $GCC.tar.gz
+	tar xvf $GCC.tar.gz
+	rm $GCC.tar.gz
 	mkdir -p build-gcc
 fi
 
-if [ ! -f "$PREFIX/bin/i686-elf-gcc-10.2.0" ]; then
-	cd gcc-10.2.0
+if [ ! -f "$PREFIX/bin/i686-elf-$GCC" ]; then
+	cd $GCC
 	sh ./contrib/download_prerequisites
 	cd ../build-gcc
-	../gcc-10.2.0/configure --target="$TARGET" --prefix="$PREFIX" --disable-nls --enable-languages=c,c++ --without-headers
+	../$GCC/configure --target="$TARGET" --prefix="$PREFIX" --disable-nls --enable-languages=c,c++ --without-headers
 
 	make all-gcc
 	make all-target-libgcc
