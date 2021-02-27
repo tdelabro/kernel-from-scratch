@@ -50,6 +50,12 @@ impl PageFrame {
     }
 }
 
+impl fmt::Display for PageFrame {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{:#010x}", self.address())
+    }
+}
+
 impl FrameManager {
     fn next_available(&self) -> Result<PageFrame, PhysicalMemoryError> {
         let idx = self.bitmap.iter()
@@ -58,10 +64,11 @@ impl FrameManager {
 
         idx.map_or(Err(PhysicalMemoryError::NoFrameAvailable), |i| {
             let mut j: usize = 0;
-            while !self.bitmap[self.skip + i] & (0x80000000 >> j) == 0 {
+            let real_idx = i + self.skip;
+            while !self.bitmap[real_idx] & (0x80000000 >> j) == 0 {
                 j += 1;
             }
-            Ok(PageFrame((i * 32 + j) * PAGE_SIZE_4K))
+            Ok(PageFrame((real_idx * 32 + j) * PAGE_SIZE_4K))
         })
     }
 

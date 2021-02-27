@@ -10,6 +10,7 @@ use core::alloc::{Layout, GlobalAlloc, Allocator};
 use core::ptr::{NonNull};
 use physical_memory_management::{BITMAP};
 use alloc::boxed::Box;
+use alloc::vec;
 
 fn box_demo() {
     {
@@ -65,10 +66,9 @@ fn allocator_method_demo() {
     unsafe { my_allocator.deallocate(x.cast::<u8>(), Layout::new::<usize>()) };
     print!("{}", my_allocator.lock());
     println!("-----");
-    //println!("{}", BITMAP.lock());
 }
 
-fn infinite_alloc_demo() {
+fn infinite_allocate_demo() {
     let my_allocator = unsafe { Locked::new(Heap::new(0x7FFE000 as *const usize, false)) };
     let mut c = 0;
     while let Ok(x) = my_allocator.allocate(Layout::new::<[u32; 1024]>()) {
@@ -78,9 +78,39 @@ fn infinite_alloc_demo() {
     println!("{}", BITMAP.lock());
 }
 
+fn infinite_alloc_demo() {
+    let my_allocator = unsafe { Locked::new(Heap::new(0x7FFE000 as *const usize, false)) };
+    let mut c = 0;
+    let mut x = unsafe { my_allocator.alloc(Layout::new::<[u32; 1024]>()) };
+    while !x.is_null() {
+        println!("{} {:p} {}", c, x, my_allocator.lock());
+        c += 1; 
+        x = unsafe { my_allocator.alloc(Layout::new::<[u32; 1024]>()) };
+    }
+    println!("{}", my_allocator.lock());
+}
+
+fn infinite_box_demo() {
+    let mut c = 0;
+    loop {
+        let x = Box::new([0u32; 1024]);
+        println!("{} {:p} {}", c, x, KERNEL_HEAP.lock());
+        c += 1; 
+    }
+}
+
+fn toobig_vec_demo() {
+    let _ = vec![0; 1000 * 1000 * 1024];
+    println!("{}", KERNEL_HEAP.lock());
+    println!("{}", BITMAP.lock());
+}
+
 pub fn demo() {
     //box_demo();
     //expand_heap_demo();
     //allocator_method_demo();
-    infinite_alloc_demo();
+    //infinite_allocate_demo();
+    //infinite_alloc_demo();
+    //infinite_box_demo();
+    //toobig_vec_demo();
 }

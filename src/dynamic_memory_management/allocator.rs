@@ -5,13 +5,13 @@ use core::mem;
 
 use super::Locked;
 use alloc::alloc::{AllocError, Allocator, GlobalAlloc, Layout};
-use core::ptr::NonNull;
+use core::ptr::{NonNull, null};
 
 unsafe impl GlobalAlloc for Locked<Heap> {
     unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
         match self.allocate(layout) {
             Ok(p) => p.cast::<u8>().as_ptr(),
-            Err(_) => 0x0 as *mut u8,
+            Err(_) => null::<u8>() as *mut u8,
         }
     }
 
@@ -285,7 +285,8 @@ impl fmt::Display for Heap {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
             f,
-            "Heap end at: {:p} and accessible by {}.\n",
+            "Heap start at: {:p}, end at: {:p} and accessible by {}.\n",
+            self.start,
             self.brk,
             if self.is_supervisor {
                 "supervisor only"
