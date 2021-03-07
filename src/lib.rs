@@ -50,6 +50,7 @@ pub mod virtual_memory_management;
 pub mod dynamic_memory_management;
 pub mod external_symbols;
 pub mod heap_demo;
+pub mod multiboot_info;
 
 use keyboard::{Command, KEYBOARD};
 use ps2::PS2;
@@ -87,8 +88,9 @@ fn init() {
 /// screen.
 #[no_mangle]
 pub extern "C" fn kernel_main(magic_number: usize , p_multiboot_info: *const usize) {
+    unsafe { multiboot_info::parse_multiboot_info(magic_number, p_multiboot_info) };
     init();
-    println!("{:#010x} {:p}", magic_number, p_multiboot_info);
+    debug::print_kernel_sections_addresses();
     loop {
         let c = PS2.lock().read();
         match KEYBOARD.lock().handle_scan_code(c as usize) {
