@@ -86,10 +86,9 @@ fn init() {
 /// It first initializes hardwares and wait for keyboard inputs to display on
 /// screen.
 #[no_mangle]
-pub extern "C" fn kernel_main() {
+pub extern "C" fn kernel_main(magic_number: usize , p_multiboot_info: *const usize) {
     init();
-    debug::print_kernel_sections_addresses();
-    heap_demo::demo();
+    println!("{:#010x} {:p}", magic_number, p_multiboot_info);
     loop {
         let c = PS2.lock().read();
         match KEYBOARD.lock().handle_scan_code(c as usize) {

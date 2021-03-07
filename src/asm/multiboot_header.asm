@@ -30,7 +30,26 @@ _start:
     mov esp, stack_high
 	xor ebp, ebp
 
+	; Save caller state
+	push eax
+	push ecx
+	push edx
+
+	; push arguments
+	; https://www.gnu.org/software/grub/manual/multiboot2/multiboot.html#Boot-information-format
+	push ebx ; physical address of the Multiboot2 information structure
+	push eax ; magic value for MultiBoot2 compliant bootloader, 0x36d76289
+
 	call kernel_main
+
+	; pop arguments
+	pop eax
+	pop eax
+
+	; Restore caller state
+	pop edx
+	pop ecx
+	pop eax
 
 	cli
 .hang:	hlt
