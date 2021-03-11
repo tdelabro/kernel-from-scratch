@@ -8,6 +8,7 @@ use self::page_structs::{PageDirectory};
 use core::ptr::Unique;
 use crate::external_symbols::{get_kernel_start, get_kernel_end};
 use crate::physical_memory_management::BITMAP;
+use crate::MultibootInfo;
 
 /// Physical address of the page directory frame
 const PAGE_DIR_ADDRESS: usize = 0x21000;
@@ -34,9 +35,15 @@ fn enable(page_dir_address: usize) {
 /// - Ps2 ports
 /// - VGA screen memory map
 /// - The whole kernel
-pub fn init(enable_paging: bool) {
+pub fn init(enable_paging: bool, multiboot_info: MultibootInfo) {
     let kernel_first_page = get_kernel_start() as usize & !0xFFF;
     let kernel_last_page = get_kernel_end() as usize & !0xFFF;
+    let multiboot_frame_add = multiboot_info.inner as usize & !0xFFF;
+
+    let mem_map = multiboot_info.get_memory_map().unwrap();
+    println!("{:?} {:?}", mem_map, unsafe { *mem_map.inner });
+
+
     if enable_paging {
         PAGE_DIRECTORY.lock().clear();
 
@@ -56,6 +63,11 @@ pub fn init(enable_paging: bool) {
             i += 0x1000;
         }
 
+        // MultibootInfo
+        if BITMAP.lock().alloc_frame_by_address(multiboot_frame_add).is_ok() {
+            PAGE_DIRECTORY.lock().map_pages(multiboot_frame_add, multiboot_frame_add, 0x3).unwrap();
+        }
+
         // Recursive page directory trick
         PAGE_DIRECTORY.lock().set_entry(1023, PAGE_DIR_ADDRESS, 0x3); 
         enable(PAGE_DIR_ADDRESS);
@@ -70,6 +82,7 @@ pub fn init(enable_paging: bool) {
             BITMAP.lock().alloc_frame_by_address(i).unwrap();
             i += 0x1000;
         }
+        BITMAP.lock().alloc_frame_by_address(multiboot_frame_add).ok();
     }
 }
 

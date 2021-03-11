@@ -55,6 +55,7 @@ pub mod multiboot_info;
 use keyboard::{Command, KEYBOARD};
 use ps2::PS2;
 use writer::WRITER;
+use multiboot_info::MultibootInfo;
 
 /// This function is called on panic.
 #[panic_handler]
@@ -70,12 +71,15 @@ fn alloc_error_handler(layout: alloc::alloc::Layout) -> ! {
     panic!("allocation error: {:?}", layout)
 }
 
-fn init() {
+fn init(magic_number: usize , p_multiboot_info: MultibootInfo) {
+    assert_eq!(magic_number, 0x36d76289, "System hadn't been loaded by a Multiboot2-compliant boot loader.");
+
+    //unsafe { multiboot_info::parse_multiboot_info(magic_number, p_multiboot_info) };
     // Global Descriptor Table
     gdt::init();
 
     // Paging
-    virtual_memory_management::init(true);
+    virtual_memory_management::init(true, p_multiboot_info);
 
     // Keyboard input
     PS2.lock().init();
@@ -87,10 +91,9 @@ fn init() {
 /// It first initializes hardwares and wait for keyboard inputs to display on
 /// screen.
 #[no_mangle]
-pub extern "C" fn kernel_main(magic_number: usize , p_multiboot_info: *const usize) {
-    unsafe { multiboot_info::parse_multiboot_info(magic_number, p_multiboot_info) };
-    init();
-    debug::print_kernel_sections_addresses();
+pub extern "C" fn kernel_main(magic_number: usize , p_multiboot_info: MultibootInfo) {
+    init(magic_number, p_multiboot_info);
+//    debug::print_kernel_sections_addresses();
     loop {
         let c = PS2.lock().read();
         match KEYBOARD.lock().handle_scan_code(c as usize) {
