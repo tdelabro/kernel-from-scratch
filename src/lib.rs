@@ -74,7 +74,6 @@ fn alloc_error_handler(layout: alloc::alloc::Layout) -> ! {
 fn init(magic_number: usize , p_multiboot_info: MultibootInfo) {
     assert_eq!(magic_number, 0x36d76289, "System hadn't been loaded by a Multiboot2-compliant boot loader.");
 
-    //unsafe { multiboot_info::parse_multiboot_info(magic_number, p_multiboot_info) };
     // Global Descriptor Table
     gdt::init();
 

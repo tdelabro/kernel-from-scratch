@@ -6,8 +6,9 @@ mod page_structs;
 
 use self::page_structs::{PageDirectory};
 use core::ptr::Unique;
+use core::convert::TryInto;
 use crate::external_symbols::{get_kernel_start, get_kernel_end};
-use crate::physical_memory_management::BITMAP;
+use crate::physical_memory_management::{BITMAP, PAGE_SIZE_4K};
 use crate::MultibootInfo;
 
 /// Physical address of the page directory frame
@@ -36,16 +37,28 @@ fn enable(page_dir_address: usize) {
 /// - VGA screen memory map
 /// - The whole kernel
 pub fn init(enable_paging: bool, multiboot_info: MultibootInfo) {
+
+    // Only let available the RAM really provided by the system
+    let mem_map = multiboot_info.get_memory_map().unwrap();
+    unsafe {
+        assert_eq!((*mem_map.inner).entry_version, 0, "multiboot memory doesn't use version 0 entries");
+        for mem_entry in mem_map {
+            if (*mem_entry).typ != 1 {
+                let mut c_mem = 0;
+                let base_frame = (*mem_entry).base_addr & !0xFFF;
+                let end = (*mem_entry).base_addr + (*mem_entry).length;
+
+                while base_frame + c_mem < end {
+                    BITMAP.lock().alloc_frame_by_address((base_frame + c_mem).try_into().unwrap()).unwrap();
+                    c_mem += PAGE_SIZE_4K as u64;
+                }
+            }
+        }
+    }
+
     let kernel_first_page = get_kernel_start() as usize & !0xFFF;
     let kernel_last_page = get_kernel_end() as usize & !0xFFF;
     let multiboot_frame_add = multiboot_info.inner as usize & !0xFFF;
-
-    let mem_map = multiboot_info.get_memory_map().unwrap();
-    assert_eq!(unsafe { (*mem_map.inner).entry_version }, 0,
-        "multiboot memory doesn't use version 0 entries");
-    for mem_entry in mem_map {
-        println!("{:x?}", unsafe { *mem_entry });
-    }
 
     if enable_paging {
         PAGE_DIRECTORY.lock().clear();

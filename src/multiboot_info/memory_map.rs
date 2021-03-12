@@ -12,9 +12,9 @@ pub struct MemoryMapTag {
 #[derive(Debug)]
 #[derive(Copy, Clone)]
 pub struct MemoryMapEntry {
-    base_addr: u64,
-    length: u64,
-    typ: u32,
+    pub base_addr: u64,
+    pub length: u64,
+    pub typ: u32,
     _reserved: u32,
 }
 

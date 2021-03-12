@@ -83,34 +83,3 @@ impl MultibootInfo {
         None
     }
 }
-
-
-/*
-pub unsafe fn parse_multiboot_info (magic_number: usize, p_info: *const FixedPart) {
-    assert_eq!(magic_number, 0x36d76289, "System hadn't been loaded by a Multiboot2-compliant boot loader.");
-
-    let mut ret: ParsedMultibootInfo = Default::default();
-    println!("Parsing Multiboot info");
-    println!("Total size: {}, start: {:p}", (*p_info).total_size, p_info);
-
-    let mut head = Some(p_info.offset(1) as *const Tag);
-
-    let mut c = 0;
-    while let Some(current) = head {
-        println!("{} {:p} {:?}", c, current, *current);
-
-        match (*current).typ {
-            4 => parse_basic_memory(current as *const BasicMemoryTag, &mut ret),
-            8 => parse_framebuffer(current as *const FramebufferTag, &mut ret),
-            6 => parse_memory_map(current as *const MemoryMapTag, &mut ret),
-            _ => {},
-        }
-
-        c += 1;
-        head = get_next_tag(current);
-    }
-
-    //    println!("{:?}", ret)
-}
-*/
-

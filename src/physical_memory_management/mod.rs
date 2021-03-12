@@ -3,11 +3,11 @@
 //! Keep track of the availibility of each physical page frame.
 //! Optimize time complexity of finding an available one.
 
+use crate::MultibootInfo;
+
 /// 0x1000
 pub const PAGE_SIZE_4K: usize = 4096;
-/// 0x8000000
-pub const RAM_SIZE: usize = 0x8000000;
-const N_FRAMES: usize = RAM_SIZE / PAGE_SIZE_4K;
+const N_FRAMES: usize = 0x100000;
 const BITMAP_LEN: usize = N_FRAMES / 32;
 
 /// Bitmap representation of physical memrory
@@ -18,6 +18,10 @@ const BITMAP_LEN: usize = N_FRAMES / 32;
 pub struct FrameManager {
     bitmap: [u32; BITMAP_LEN],
     skip: usize,
+}
+
+pub struct MemoryChunk {
+    manager: FrameManager,
 }
 
 #[derive(Debug, Copy, Clone)]
