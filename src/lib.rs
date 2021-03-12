@@ -93,7 +93,7 @@ fn init(magic_number: usize , p_multiboot_info: MultibootInfo) {
 #[no_mangle]
 pub extern "C" fn kernel_main(magic_number: usize , p_multiboot_info: MultibootInfo) {
     init(magic_number, p_multiboot_info);
-//    debug::print_kernel_sections_addresses();
+    debug::print_kernel_sections_addresses();
     loop {
         let c = PS2.lock().read();
         match KEYBOARD.lock().handle_scan_code(c as usize) {

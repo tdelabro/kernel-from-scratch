@@ -41,8 +41,11 @@ pub fn init(enable_paging: bool, multiboot_info: MultibootInfo) {
     let multiboot_frame_add = multiboot_info.inner as usize & !0xFFF;
 
     let mem_map = multiboot_info.get_memory_map().unwrap();
-    println!("{:?} {:?}", mem_map, unsafe { *mem_map.inner });
-
+    assert_eq!(unsafe { (*mem_map.inner).entry_version }, 0,
+        "multiboot memory doesn't use version 0 entries");
+    for mem_entry in mem_map {
+        println!("{:x?}", unsafe { *mem_entry });
+    }
 
     if enable_paging {
         PAGE_DIRECTORY.lock().clear();
