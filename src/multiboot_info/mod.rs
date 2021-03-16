@@ -1,10 +1,8 @@
-mod memory_map;
 mod framebuffer;
+mod memory_map;
 
-use core::mem;
-use core::convert::TryInto;
-use self::memory_map::*;
 use self::framebuffer::*;
+use self::memory_map::*;
 
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
@@ -66,7 +64,7 @@ impl MultibootInfo {
             if unsafe { (*tag).typ } == 6 {
                 return Some(MemoryMap {
                     inner: tag as *const MemoryMapTag,
-                })
+                });
             }
         }
 
@@ -76,7 +74,7 @@ impl MultibootInfo {
     pub fn get_framebuffer(&self) -> Option<FramebufferTag> {
         for tag in self.into_iter() {
             if unsafe { (*tag).typ } == 8 {
-                return Some(unsafe { *(tag as *const FramebufferTag) })
+                return Some(unsafe { *(tag as *const FramebufferTag) });
             }
         }
 

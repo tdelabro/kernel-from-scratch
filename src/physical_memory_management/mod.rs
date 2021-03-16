@@ -3,9 +3,7 @@
 //! Keep track of the availibility of each physical page frame.
 //! Optimize time complexity of finding an available one.
 
-use crate::MultibootInfo;
-
-/// 0x1000
+/// 4096
 pub const PAGE_SIZE_4K: usize = 4096;
 const N_FRAMES: usize = 0x100000;
 const BITMAP_LEN: usize = N_FRAMES / 32;
@@ -18,10 +16,6 @@ const BITMAP_LEN: usize = N_FRAMES / 32;
 pub struct FrameManager {
     bitmap: [u32; BITMAP_LEN],
     skip: usize,
-}
-
-pub struct MemoryChunk {
-    manager: FrameManager,
 }
 
 #[derive(Debug, Copy, Clone)]
@@ -37,7 +31,12 @@ struct PageFrame(usize);
 
 impl PageFrame {
     fn new(address: usize) -> PageFrame {
-        assert_eq!(0, address & 0xFFF, "frame address is not aligned: {:#10x}", address);
+        assert_eq!(
+            0,
+            address & 0xFFF,
+            "frame address is not aligned: {:#10x}",
+            address
+        );
         PageFrame(address)
     }
 
@@ -62,9 +61,7 @@ impl fmt::Display for PageFrame {
 
 impl FrameManager {
     fn next_available(&self) -> Result<PageFrame, PhysicalMemoryError> {
-        let idx = self.bitmap.iter()
-            .skip(self.skip)
-            .position(|&x| x != !0);
+        let idx = self.bitmap.iter().skip(self.skip).position(|&x| x != !0);
 
         idx.map_or(Err(PhysicalMemoryError::NoFrameAvailable), |i| {
             let mut j: usize = 0;
@@ -81,7 +78,7 @@ impl FrameManager {
         let o = page.offset();
 
         if i >= BITMAP_LEN {
-            return Err(PhysicalMemoryError::AddressOutOfMemory)
+            return Err(PhysicalMemoryError::AddressOutOfMemory);
         }
 
         match self.bitmap[i] & (0x80000000 >> o) == 0 {
@@ -133,11 +130,11 @@ use core::fmt;
 
 impl fmt::Display for FrameManager {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "Used frames:\n")?;
+        writeln!(f, "Used frames:")?;
         for (i, u) in self.bitmap.iter().enumerate() {
             for j in 0..32 {
                 if u & (0x80000000 >> j) != 0 {
-                    write!(f, "{:#010x} ",  PAGE_SIZE_4K * (32 * i + j))?;
+                    write!(f, "{:#010x} ", PAGE_SIZE_4K * (32 * i + j))?;
                 }
             }
         }

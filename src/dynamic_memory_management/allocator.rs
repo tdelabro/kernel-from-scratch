@@ -5,7 +5,7 @@ use core::mem;
 
 use super::Locked;
 use alloc::alloc::{AllocError, Allocator, GlobalAlloc, Layout};
-use core::ptr::{NonNull, null};
+use core::ptr::{null, NonNull};
 
 unsafe impl GlobalAlloc for Locked<Heap> {
     unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
@@ -57,12 +57,15 @@ pub struct Heap {
 unsafe impl Send for Heap {}
 
 impl Heap {
+    /// # Safety
+    ///
+    /// The start_add must be that of an available, 0x1000 aligned, page.
     pub const unsafe fn new(start_add: *const usize, is_supervisor: bool) -> Heap {
         Heap {
             start: start_add,
             brk: start_add,
             free_list: None,
-            is_supervisor: is_supervisor,
+            is_supervisor,
         }
     }
 
@@ -184,7 +187,7 @@ impl Heap {
         if let Some(node) = self.free_list {
             unsafe {
                 if (*node).size > PAGE_SIZE_4K && (*node).next <= node {
-                    self.sbrk(PAGE_SIZE_4K as isize * -1).unwrap();
+                    self.sbrk(-(PAGE_SIZE_4K as isize)).unwrap();
                     (*self.free_list.unwrap()).size -= PAGE_SIZE_4K;
                 }
             }
@@ -274,6 +277,9 @@ impl Heap {
         });
     }
 
+    /// # Safety
+    ///
+    /// This function should be called on an memory area allocated by this allocator
     pub unsafe fn size(address: NonNull<u8>) -> usize {
         *address.cast::<usize>().as_ptr().offset(-3)
     }
@@ -283,9 +289,9 @@ use core::fmt;
 
 impl fmt::Display for Heap {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(
+        writeln!(
             f,
-            "Heap start at: {:p}, end at: {:p} and accessible by {}.\n",
+            "Heap start at: {:p}, end at: {:p} and accessible by {}.",
             self.start,
             self.brk,
             if self.is_supervisor {
@@ -296,19 +302,19 @@ impl fmt::Display for Heap {
         )?;
         if let Some(start) = self.free_list {
             let mut head = start;
-            write!(f, "Free chunks list:\n")?;
+            writeln!(f, "Free chunks list:")?;
 
             // Do-while blackmagic
             while {
                 unsafe {
-                    write!(f, "{}\n", head.as_ref().unwrap())?;
+                    writeln!(f, "{}", head.as_ref().unwrap())?;
                     head = (*head).next;
                 }
 
                 head != start
             } {}
         } else {
-            write!(f, "No free chunks\n")?;
+            writeln!(f, "No free chunks")?;
         }
         Ok(())
     }
@@ -319,7 +325,7 @@ use core::ops::Drop;
 impl Drop for Heap {
     fn drop(&mut self) {
         while self.brk > self.start {
-            self.sbrk(PAGE_SIZE_4K as isize * -1).unwrap();
+            self.sbrk(-(PAGE_SIZE_4K as isize)).unwrap();
         }
     }
 }

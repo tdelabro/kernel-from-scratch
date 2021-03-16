@@ -2,13 +2,15 @@
 //!
 //! Handle a set of basic user instructions.
 
-use crate::writer::{WRITER, BUFFER_WIDTH};
+use crate::debug;
+use crate::power_management;
+use crate::writer::WRITER;
 use core::str::SplitWhitespace;
 
+use alloc::prelude::v1::Vec;
 use spin::Mutex;
 
-pub static LAST_COMMAND: Mutex<[u8; BUFFER_WIDTH]> = Mutex::new(
-    [0u8; BUFFER_WIDTH]);
+static LAST_COMMAND: Mutex<Option<Vec<u8>>> = Mutex::new(None);
 
 /// Execute an user shell command
 ///
@@ -24,25 +26,24 @@ pub static LAST_COMMAND: Mutex<[u8; BUFFER_WIDTH]> = Mutex::new(
 ///     - trace \[max\]
 ///
 pub fn execute() {
-    let mut ascii_line = [0x0u8; BUFFER_WIDTH];
-    WRITER.lock().get_bottom_line(&mut ascii_line);
-    println!("");
+    let ascii_line = WRITER.lock().as_ref().unwrap().get_bottom_line();
+    println!();
 
     let mut words = match core::str::from_utf8(&ascii_line) {
         Ok(s) => s.trim_matches(0x0 as char).trim().split_whitespace(),
-        Err(_) => { return; },
+        Err(_) => {
+            return;
+        }
     };
     match words.next() {
         Some("dump") => dump(words),
-        Some("shutdown") => crate::power_management::shutdown(),
-        Some("reboot") => crate::power_management::reboot(),
-        Some("clear") => WRITER.lock().clear_screen(),
+        Some("shutdown") => power_management::shutdown(),
+        Some("reboot") => power_management::reboot(),
+        Some("clear") => WRITER.lock().as_mut().unwrap().clear_screen(),
         _ => (),
     };
 
-    for i in 0..BUFFER_WIDTH {
-        LAST_COMMAND.lock()[i] = ascii_line[i];
-    }
+    LAST_COMMAND.lock().replace(ascii_line);
 }
 
 /// Load last command
@@ -50,27 +51,26 @@ pub fn execute() {
 /// Replace the current terminal line by the last command that have been
 /// executed
 pub fn load_last_command() {
-    WRITER.lock().swap_bottom_line(&LAST_COMMAND.lock());
+    if let Some(cmd) = &*LAST_COMMAND.lock() {
+        WRITER.lock().as_mut().unwrap().swap_bottom_line(cmd);
+    }
 }
 
 fn dump(mut words: SplitWhitespace) {
     match words.next() {
-        Some("seg_reg") => crate::debug::dump_segment_registers(),
-        Some("gdtr") => crate::debug::dump_gdtr(),
-        Some("gdt") => crate::debug::dump_gdt(),
-        Some("stack") => crate::debug::dump_stack(get_number(words)),
-        Some("trace") => crate::debug::stack_trace(get_number(words)),
-        Some("bitmap") => crate::debug::dump_bitmap(),
+        Some("seg_reg") => debug::dump_segment_registers(),
+        Some("gdtr") => debug::dump_gdtr(),
+        Some("gdt") => debug::dump_gdt(),
+        Some("stack") => debug::dump_stack(get_number(words)),
+        Some("trace") => debug::stack_trace(get_number(words)),
+        Some("bitmap") => debug::dump_bitmap(),
         _ => (),
     };
 }
 
 fn get_number(mut words: SplitWhitespace) -> usize {
     match words.next() {
-        Some(s) => match s.parse() {
-            Ok(n) => n,
-            Err(_) => 0,
-        },
+        Some(s) => s.parse().unwrap_or(0),
         _ => 0,
     }
 }

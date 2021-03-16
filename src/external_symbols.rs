@@ -1,5 +1,5 @@
 //! Symbols defined in the linker script
-//! 
+//!
 //! Provide information about kernel the memory layout.
 //! Used for kernel identity mapping and debug.
 

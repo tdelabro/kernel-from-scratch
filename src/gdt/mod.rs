@@ -1,11 +1,11 @@
 //! Global Descriptor Table
 
-mod tss;
 mod segment_descriptor;
+mod tss;
 
-use core::fmt;
-use self::tss::Tss;
 pub use self::segment_descriptor::SegmentDescriptor;
+use self::tss::Tss;
+use core::fmt;
 
 extern "C" {
     fn memcpy(dst: *mut u8, src: *const u8, size: usize);
@@ -22,11 +22,11 @@ pub struct GdtR {
 }
 
 impl fmt::Display for GdtR {
-        fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result { 
-            let base = self.base;
-            let limit = self.limit;
-            write!(f, "base: {:#010x}, limit: {:#06x}", base, limit)
-        }
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let base = self.base;
+        let limit = self.limit;
+        write!(f, "base: {:#010x}, limit: {:#06x}", base, limit)
+    }
 }
 
 pub const GDTBASE: usize = 0x00000800;
@@ -49,11 +49,15 @@ impl GdtR {
         let gdtr = GdtR::current();
 
         if index >= (gdtr.limit as usize + 1) / 8 {
-            return None
+            return None;
         }
         let mut desc: SegmentDescriptor = Default::default();
         unsafe {
-            memcpy(&mut desc as *mut _ as *mut u8, (gdtr.base + size_of::<SegmentDescriptor>() * index) as *const u8, 8);
+            memcpy(
+                &mut desc as *mut _ as *mut u8,
+                (gdtr.base + size_of::<SegmentDescriptor>() * index) as *const u8,
+                8,
+            );
         }
 
         Some(desc)
@@ -73,21 +77,20 @@ impl GdtR {
 /// GDT\[7\] = Task State Segment  
 pub fn init() {
     let stack_high: u32;
-    unsafe { asm!("lea {}, [stack_high]", out(reg) stack_high, options(nostack)); }
-    let tss = Tss::new(stack_high); 
+    unsafe {
+        asm!("lea {}, [stack_high]", out(reg) stack_high, options(nostack));
+    }
+    let tss = Tss::new(stack_high);
 
     let descriptors: [SegmentDescriptor; GDTLEN] = [
-        SegmentDescriptor::new(0x0, 0x0, 0x0, 0x0),       // 0x0 Not used
-
-        SegmentDescriptor::new(0x0, 0xFFFFF, 0x9A, 0xC), // 0x8  Code 
+        SegmentDescriptor::new(0x0, 0x0, 0x0, 0x0), // 0x0 Not used
+        SegmentDescriptor::new(0x0, 0xFFFFF, 0x9A, 0xC), // 0x8  Code
         SegmentDescriptor::new(0x0, 0xFFFFF, 0x92, 0xC), // 0x10 Data
-        SegmentDescriptor::new(0x0, 0x0, 0x96, 0x0D),     // 0x18 Stack
-
+        SegmentDescriptor::new(0x0, 0x0, 0x96, 0x0D), // 0x18 Stack
         SegmentDescriptor::new(0x0, 0xFFFFF, 0xFE, 0xC), // 0x20 User Code
         SegmentDescriptor::new(0x0, 0xFFFFF, 0xF2, 0xC), // 0x28 User Data
-        SegmentDescriptor::new(0x0, 0x0, 0xF6, 0xC),     // 0x30 User Stack
-
-        SegmentDescriptor::new(&tss as *const Tss as u32, 0x67, 0xE9, 0x00),   // 0x38 TSS
+        SegmentDescriptor::new(0x0, 0x0, 0xF6, 0xC), // 0x30 User Stack
+        SegmentDescriptor::new(&tss as *const Tss as u32, 0x67, 0xE9, 0x00), // 0x38 TSS
     ];
 
     let mut gdt = Gdt {
@@ -104,7 +107,11 @@ struct Gdt {
 
 impl Gdt {
     unsafe fn copy_to_base(&mut self, gdt: &[SegmentDescriptor]) {
-        memcpy(self.base as *mut u8, gdt.as_ptr() as *const u8, 8 * gdt.len());
+        memcpy(
+            self.base as *mut u8,
+            gdt.as_ptr() as *const u8,
+            8 * gdt.len(),
+        );
         self.len = gdt.len();
     }
 

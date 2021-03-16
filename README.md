@@ -16,3 +16,5 @@ Current step: kfs-3.
  * Paging & virtual memory management
  * Unique Kernel heap
  * Multiple user heaps
+ * Compatibility with alloc crate
+ * Dynamic framebuffer and RAM size

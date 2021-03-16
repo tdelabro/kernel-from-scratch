@@ -2,8 +2,17 @@
 
 pub trait InOut {
     /// Read data from a port
+    ///
+    /// # Safety
+    ///
+    /// This function should be called on a port
     unsafe fn port_in(port: u16) -> Self;
+
     /// Write data to a port
+    ///
+    /// # Safety
+    ///
+    /// This function should be called on a port
     unsafe fn port_out(port: u16, value: Self);
 }
 
@@ -60,7 +69,7 @@ pub struct Port<T: InOut> {
 impl<T: InOut> Port<T> {
     pub const fn new(port: u16) -> Port<T> {
         Port {
-            port: port,
+            port,
             phantom: PhantomData,
         }
     }
@@ -73,47 +82,6 @@ impl<T: InOut> Port<T> {
         unsafe {
             T::port_out(self.port, value);
         }
-    }
-}
-
-/// An unsafe I/O port
-///
-/// Interaction with a specific unsafe port is done through this stucture.
-/// The type specify the size of the data been read or written.
-///
-/// Read and write are executed through volatile instructions and therefore
-/// will not be optimised out by the compilator.
-///
-/// # Examples
-///
-/// ```
-/// let port128: Port<u8> = UnsafePort::new(0x80);
-///
-/// unsafe {
-///     let value = port128.read();
-///     port128.write(0xFF);
-/// }
-/// ```
-#[derive(Clone, Copy)]
-pub struct UnsafePort<T: InOut> {
-    port: u16,
-    phantom: PhantomData<T>,
-}
-
-impl<T: InOut> UnsafePort<T> {
-    pub const unsafe fn new(port: u16) -> UnsafePort<T> {
-        UnsafePort {
-            port: port,
-            phantom: PhantomData,
-        }
-    }
-
-    pub unsafe fn read(&mut self) -> T {
-        T::port_in(self.port)
-    }
-
-    pub unsafe fn write(&mut self, value: T) {
-        T::port_out(self.port, value);
     }
 }
 

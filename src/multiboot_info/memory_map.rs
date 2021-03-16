@@ -1,6 +1,5 @@
 #[repr(C)]
-#[derive(Debug)]
-#[derive(Copy, Clone)]
+#[derive(Debug, Copy, Clone)]
 pub struct MemoryMapTag {
     typ: usize,
     size: usize,
@@ -9,8 +8,7 @@ pub struct MemoryMapTag {
 }
 
 #[repr(C)]
-#[derive(Debug)]
-#[derive(Copy, Clone)]
+#[derive(Debug, Copy, Clone)]
 pub struct MemoryMapEntry {
     pub base_addr: u64,
     pub length: u64,
@@ -20,7 +18,7 @@ pub struct MemoryMapEntry {
 
 #[derive(Debug)]
 pub struct MemoryMap {
-    pub inner: *const MemoryMapTag
+    pub inner: *const MemoryMapTag,
 }
 
 #[derive(Debug, Copy, Clone)]
@@ -55,15 +53,4 @@ impl Iterator for MemoryMapIntoIter {
             Some(ret)
         }
     }
-}
-
-unsafe fn parse_memory_map(tag: *const MemoryMapTag) {
-    let end = tag as usize + (*tag).size as usize;
-    let mut head = tag.offset(1) as *const MemoryMapEntry;
-
-    while (head as usize) < end {
-        println!("{:0x?}", *head);
-        head = head.offset(1);
-    }
-    println!("{:?}", *tag);
 }

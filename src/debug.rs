@@ -9,7 +9,9 @@
 #[inline(always)]
 pub fn stack_trace(max: usize) {
     let mut base_pointer: *const usize;
-    unsafe { asm!("mov eax, ebp", out("eax") base_pointer); }
+    unsafe {
+        asm!("mov eax, ebp", out("eax") base_pointer);
+    }
 
     let mut c: usize = 0;
     while !base_pointer.is_null() && (c < max || max == 0) {
@@ -30,16 +32,16 @@ pub fn dump_stack(max: usize) {
     let stack_high: *const usize;
     let esp: *const usize;
 
-    unsafe { 
+    unsafe {
         asm!("lea {}, [stack_high]
             mov {}, esp", 
             out(reg) stack_high, out(reg) esp,
-            options(nostack)); 
+            options(nostack));
     }
 
     let mut c: usize = 0;
     let mut head = esp;
-    while head != stack_high && (c < max || max == 0){
+    while head != stack_high && (c < max || max == 0) {
         println!("{:p}: {:#010x}", head, unsafe { *head } as usize);
         head = unsafe { head.offset(1) };
         c += 1;
@@ -47,7 +49,7 @@ pub fn dump_stack(max: usize) {
     println!("Stack size: {}", stack_high as usize - esp as usize);
 }
 
-use crate::gdt::{GdtR};
+use crate::gdt::GdtR;
 
 /// Display the Global Descriptor Table Register
 ///
@@ -83,23 +85,49 @@ pub fn dump_segment_registers() {
         asm!("mov ax, fs", out("ax") fs, options(nostack));
         asm!("mov ax, gs", out("ax") gs, options(nostack));
     }
-    println!("cs: {:#06x}, ds: {:#06x}, ss: {:#06x}\nes: {:#06x}, fs: {:#06x}, gs: {:#06x}",
-        cs, ds, ss, es, fs, gs);
+    println!(
+        "cs: {:#06x}, ds: {:#06x}, ss: {:#06x}\nes: {:#06x}, fs: {:#06x}, gs: {:#06x}",
+        cs, ds, ss, es, fs, gs
+    );
 }
 
 use crate::external_symbols::*;
 
 /// Print the addresses of symbols defined in the linker script
-/// 
+///
 /// Begining and enf oth the kernel sections and stack
 pub fn print_kernel_sections_addresses() {
-    println!("kernel: start {:p} end {:p}", get_kernel_start(), get_kernel_end());
-    println!("text: start {:p} end {:p}", get_section_text_start(), get_section_text_end());
-    println!("rodata: start {:p} end {:p}", get_section_rodata_start(), get_section_rodata_end());
-    println!("data: start {:p} end {:p}", get_section_data_start(), get_section_data_end());
-    println!("bss: start {:p} end {:p}", get_section_bss_start(), get_section_bss_end());
+    println!(
+        "kernel: start {:p} end {:p}",
+        get_kernel_start(),
+        get_kernel_end()
+    );
+    println!(
+        "text: start {:p} end {:p}",
+        get_section_text_start(),
+        get_section_text_end()
+    );
+    println!(
+        "rodata: start {:p} end {:p}",
+        get_section_rodata_start(),
+        get_section_rodata_end()
+    );
+    println!(
+        "data: start {:p} end {:p}",
+        get_section_data_start(),
+        get_section_data_end()
+    );
+    println!(
+        "bss: start {:p} end {:p}",
+        get_section_bss_start(),
+        get_section_bss_end()
+    );
     println!("common bss sep: {:p}", get_common_bss_sep());
-    println!("stack: low {:p} high {:p}", get_stack_low(),  get_stack_high());
+    println!(
+        "stack: low {:p} high {:p}",
+        get_stack_low(),
+        get_stack_high()
+    );
 }
 
 pub fn dump_bitmap() {

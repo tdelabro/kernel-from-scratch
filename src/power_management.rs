@@ -18,5 +18,7 @@ pub fn shutdown() {
 ///
 /// Far jump to the reset vector in real mode, triple fault in protected mode.
 pub fn reboot() {
-    unsafe { asm!("ljmp $0xffff, $0", options(att_syntax)); }
+    unsafe {
+        asm!("ljmp $0xffff, $0", options(att_syntax));
+    }
 }

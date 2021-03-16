@@ -16,7 +16,7 @@ impl SegmentDescriptor {
             lim0_15: (limit & 0xffff) as u16,
             base0_15: (base & 0xffff) as u16,
             base16_23: ((base & 0xff0000) >> 16) as u8,
-            access: access,
+            access,
             lim16_19_flags: ((limit & 0xf0000) >> 16) as u8 | (flags & 0xf) << 4,
             base24_31: ((base & 0xff000000) >> 24) as u8,
         }
@@ -78,8 +78,8 @@ impl SegmentDescriptor {
 use core::fmt;
 
 impl fmt::Display for SegmentDescriptor {
-        fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result { 
-            write!(f, "base: {:#010x}, limit: {:#07x}\npresent: {}, privilege: {}\ntype {}, dc: {}, rw: {}\naccessed: {}, granularity: {}, size: {}, long: {}, available {}",
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "base: {:#010x}, limit: {:#07x}\npresent: {}, privilege: {}\ntype {}, dc: {}, rw: {}\naccessed: {}, granularity: {}, size: {}, long: {}, available {}",
                 self.base(), self.limit(), self.present(), self.privilege(),
                 match self.desc_type() {
                     false => "System",
@@ -98,5 +98,5 @@ impl fmt::Display for SegmentDescriptor {
                     true => "32bit",   
                 },
                 self.long(), self.available())
-        }
+    }
 }

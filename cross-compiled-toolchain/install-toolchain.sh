@@ -65,14 +65,15 @@ fi
 echo "gcc OK"
 
 # grub
-if [ $OS = "Darwin" ]; then
-	cd $SRC
-	if [ ! -d "grub" ]; then
-		echo ""
-		echo "Installing \`grub\`"
-		echo ""
-		git clone --depth 1 git://git.savannah.gnu.org/grub.git
-	fi
+cd $SRC
+if [ ! -d "grub" ]; then
+	echo ""
+	echo "Installing \`grub\`"
+	echo ""
+	git clone --depth 1 git://git.savannah.gnu.org/grub.git
+fi
+
+if [ ! -f "$PREFIX/bin/grub-mkrescue" ]; then
 	cd grub
 	./bootstrap
 	mkdir -p build-grub
@@ -80,7 +81,7 @@ if [ $OS = "Darwin" ]; then
 	../configure --disable-werror TARGET_CC=$TARGET-gcc TARGET_OBJCOPY=$TARGET-objcopy TARGET_STRIP=$TARGET-strip TARGET_NM=$TARGET-nm TARGET_RANLIB=$TARGET-ranlib --target=$TARGET --prefix="$PREFIX"
 	make
 	make install
-
-	echo "grub OK"
 fi
+
+echo "grub OK"
 
