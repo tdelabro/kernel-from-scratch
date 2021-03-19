@@ -1,5 +1,6 @@
 ARCH = i686
 OS = kfs
+RAM_AMOUNT=128M
 TARGET = $(ARCH)-$(OS)
 OPT_DIR = cross-compiled-toolchain/opt/
 
@@ -75,7 +76,7 @@ doc:
 	cargo doc --target $(TARGET).json
 
 run: $(ISO)
-	qemu-system-i386 -m 128M -cdrom $(ISO)
+	qemu-system-i386 -m 128M -cdrom $(ISO) -m $(RAM_AMOUNT) -vga std
 
 clean:
 	rm -rf $(BUILD_DIR)
