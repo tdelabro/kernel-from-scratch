@@ -51,4 +51,3 @@ impl ScreenChar {
         self.color_code.0 &= !(0xF << 4);
     }
 }
-

@@ -1,20 +1,20 @@
-//! Heap demo scenarii 
+//! Heap demo scenarii
 //!
 //! Temporary file, will be used during the project correction at 42.
 
 #![allow(unused_imports)]
 #![allow(dead_code)]
 
-use dynamic_memory_management::{KERNEL_HEAP, Heap, Locked};
-use core::alloc::{Layout, GlobalAlloc, Allocator};
-use core::ptr::{NonNull};
-use physical_memory_management::{BITMAP};
 use alloc::boxed::Box;
 use alloc::vec;
+use core::alloc::{Allocator, GlobalAlloc, Layout};
+use core::ptr::NonNull;
+use dynamic_memory_management::{Heap, Locked, KERNEL_HEAP};
+use physical_memory_management::BITMAP;
 
 fn box_demo() {
     {
-        println!("");
+        println!();
         print!("{}", KERNEL_HEAP.lock());
         println!("-----");
         let a = Box::new(1usize);
@@ -56,7 +56,10 @@ fn local_heap_demo() {
 
 fn allocator_method_demo() {
     let my_allocator = unsafe { Locked::new(Heap::new(0x7FFF000 as *const usize, false)) };
-    let mut x = my_allocator.allocate(Layout::new::<usize>()).unwrap().cast::<usize>();
+    let mut x = my_allocator
+        .allocate(Layout::new::<usize>())
+        .unwrap()
+        .cast::<usize>();
     unsafe {
         *x.as_mut() = 4;
         println!("{}", x.as_ref());
@@ -73,7 +76,7 @@ fn infinite_allocate_demo() {
     let mut c = 0;
     while let Ok(x) = my_allocator.allocate(Layout::new::<[u32; 1024]>()) {
         println!("{} {:p} {}", c, x, my_allocator.lock());
-        c += 1; 
+        c += 1;
     }
     println!("{}", BITMAP.lock());
 }
@@ -84,7 +87,7 @@ fn infinite_alloc_demo() {
     let mut x = unsafe { my_allocator.alloc(Layout::new::<[u32; 1024]>()) };
     while !x.is_null() {
         println!("{} {:p} {}", c, x, my_allocator.lock());
-        c += 1; 
+        c += 1;
         x = unsafe { my_allocator.alloc(Layout::new::<[u32; 1024]>()) };
     }
     println!("{}", my_allocator.lock());
@@ -95,7 +98,7 @@ fn infinite_box_demo() {
     loop {
         let x = Box::new([0u32; 1024]);
         println!("{} {:p} {}", c, x, KERNEL_HEAP.lock());
-        c += 1; 
+        c += 1;
     }
 }
 
